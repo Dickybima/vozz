@@ -489,6 +489,94 @@ input[type="range"]::-moz-range-thumb {
   box-shadow: 0 0 30px rgba(0, 255, 170, 0.35);
 }
 
+/* ---------- Wallet menu ---------- */
+.wallet-wrap { position: relative; }
+.wallet-chip .pass-ok { color: var(--lime); margin-left: 6px; }
+.wallet-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 30;
+  min-width: 190px;
+  padding: 6px;
+  border-radius: 12px;
+  background: #0e1626;
+  border: 1px solid var(--line);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  display: grid;
+}
+.wallet-menu button, .wallet-menu a {
+  padding: 9px 10px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font-size: 0.85rem;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.wallet-menu button:hover, .wallet-menu a:hover { background: rgba(255, 255, 255, 0.06); }
+.wallet-menu .danger { color: var(--red); }
+
+/* ---------- Mining Pass gate ---------- */
+.gate { z-index: 45; }
+.gate-dialog { max-width: 430px; }
+.pass-art {
+  display: block;
+  margin: 0 auto 6px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow: 0 0 40px rgba(0, 255, 170, 0.25);
+  animation: passFloat 4s ease-in-out infinite;
+}
+@keyframes passFloat { 50% { transform: translateY(-6px) rotate(-1deg); } }
+.gate-steps { list-style: none; display: grid; gap: 6px; margin: 0 0 14px; text-align: left; }
+.gate-steps li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+.gate-steps li small { margin-left: auto; font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted); }
+.gs-ico {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  display: grid;
+  place-items: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+.gate-steps li.done { color: var(--text); border-color: var(--border); }
+.gate-steps li.done .gs-ico { background: var(--green); border-color: var(--green); color: #02110b; }
+.gate-steps li.done .gs-ico::after { content: "✓"; }
+.gate-steps li.current { color: var(--text); border-color: rgba(204, 255, 0, 0.4); }
+.gate-steps li.current .gs-ico { border-color: var(--lime); box-shadow: 0 0 10px rgba(204, 255, 0, 0.5); }
+.pass-price {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.pass-price strong { font-family: var(--font-mono); font-size: 1.3rem; color: var(--lime); }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; box-shadow: none; }
+.gate-msg { min-height: 1.4em; margin-top: 10px; font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); }
+.gate-msg.err { color: var(--magenta); }
+.gate-msg.ok { color: var(--green); }
+.gate-msg a { color: var(--cyan); }
+.gate-note { margin-top: 10px; font-size: 0.72rem; color: #5d6d84; display: flex; flex-wrap: wrap; gap: 6px 12px; justify-content: center; }
+
 /* ---------- Toast ---------- */
 .toast {
   position: fixed;

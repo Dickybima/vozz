@@ -1,0 +1,19 @@
+{
+  "name": "vozz-contracts",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/compile.mjs",
+    "test": "node --test test/*.test.mjs",
+    "deploy:testnet": "node scripts/deploy.mjs testnet",
+    "deploy:mainnet": "node scripts/deploy.mjs mainnet"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "5.0.2",
+    "ethers": "6.13.4",
+    "solc": "0.8.26"
+  },
+  "devDependencies": {
+    "ganache": "7.9.2"
+  }
+}

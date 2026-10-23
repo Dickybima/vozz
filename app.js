@@ -8,21 +8,14 @@
  * Signups are stored in localStorage by default. To collect them on a server,
  * set WAITLIST_ENDPOINT to a URL that accepts a JSON POST: { wallet, chainId, ref, tasks }.
  *
- * VOZZ runs on Robinhood Chain (an EVM Layer 2), so wallets are 0x addresses.
+ * VOZZ runs on Robinhood Chain (an EVM Layer 2), so wallets are 0x addresses. Network
+ * settings live in config.js; wallet connection is handled by wallet.js.
  */
 (() => {
   const WAITLIST_ENDPOINT = ""; // e.g. "https://api.example.com/waitlist"
   const BETA_DATE = new Date("2027-01-15T12:00:00+07:00");
   const BASE_WAITLIST = 12847; // seed count shown before any real signups
   const STORAGE_KEY = "vozz-waitlist";
-  // Robinhood Chain mainnet. Docs: https://docs.robinhood.com/chain
-  const CHAIN = {
-    chainId: "0x1237", // 4663
-    chainName: "Robinhood Chain",
-    nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
-    rpcUrls: ["https://rpc.mainnet.chain.robinhood.com"],
-    blockExplorerUrls: ["https://robinhoodchain.blockscout.com"],
-  };
   const STARTER_GPUS = ["VX 5070", "RZ 6800 XT", "VX 6090", "RZ 7900"];
 
   // X account and post used for the missions — replace with the real ones.
@@ -326,32 +319,13 @@
     walletInput.focus();
   });
 
-  // Optional: fill the address from an injected EVM wallet and add/switch to Robinhood Chain.
+  // Optional: pick a wallet, connect it on Robinhood Chain and fill in its address.
   $("add-chain-btn").addEventListener("click", async () => {
-    const eth = window.ethereum;
-    if (!eth) {
-      toast("No wallet found — install MetaMask or paste your address");
-      return;
-    }
-    try {
-      const [account] = await eth.request({ method: "eth_requestAccounts" });
-      if (account) {
-        walletInput.value = account;
-        walletInput.dispatchEvent(new Event("input"));
-      }
-      try {
-        await eth.request({ method: "wallet_switchEthereumChain", params: [{ chainId: CHAIN.chainId }] });
-      } catch (err) {
-        if (err && err.code === 4902) {
-          await eth.request({ method: "wallet_addEthereumChain", params: [CHAIN] });
-        } else {
-          throw err;
-        }
-      }
-      toast("Connected to Robinhood Chain ✓");
-    } catch (err) {
-      toast(err && err.code === 4001 ? "Request cancelled in wallet" : "Couldn't connect — paste your address instead");
-    }
+    const st = await window.VozzWallet.pick();
+    if (!st || !st.address) return;
+    walletInput.value = st.address;
+    walletInput.dispatchEvent(new Event("input"));
+    toast(`Connected ${st.info.name} on ${window.VozzWallet.network.name} ✓`);
   });
 
   walletInput.addEventListener("input", () => {
@@ -386,7 +360,7 @@
         const res = await fetch(WAITLIST_ENDPOINT, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ wallet, chainId: parseInt(CHAIN.chainId, 16), ref, tasks: TASKS.map((t) => t.id) }),
+          body: JSON.stringify({ wallet, chainId: window.VozzWallet.network.chainId, ref, tasks: TASKS.map((t) => t.id) }),
         });
         if (!res.ok) throw new Error("HTTP " + res.status);
       } else {
@@ -399,7 +373,7 @@
 
       const entry = {
         wallet,
-        chainId: parseInt(CHAIN.chainId, 16),
+        chainId: window.VozzWallet.network.chainId,
         ref,
         id: Math.random().toString(16).slice(2, 8).toUpperCase(),
         position: waitlistCount,

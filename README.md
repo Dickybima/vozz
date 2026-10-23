@@ -18,6 +18,9 @@ Waitlist landing page for VOZZ, a GPU-themed mining simulation game built on **R
 - `video/beta-demo.html` — source of that video (a scripted canvas mock of the beta UI; open it in a browser to preview in real time)
 - `video/render.js` — renders the video frame by frame and encodes it
 - `play/` — the playable beta game (`index.html`, `game.css`, `game.js`)
+- `config.js` — network settings (Robinhood Chain mainnet/testnet) and the Mining Pass contract address
+- `wallet.js` — wallet picker (EIP-6963: MetaMask, Rabby, Coinbase, OKX, … plus open-in-app links on mobile), network switching and Mining Pass mint/check
+- `contracts/` — the VOZZ Mining Pass NFT contract, tests and deploy script (see `contracts/README.md`)
 
 ## Playable beta (`play/`)
 
@@ -30,7 +33,9 @@ Waitlist landing page for VOZZ, a GPU-themed mining simulation game built on **R
 - **Missions** with VOZZ rewards, a leaderboard against simulated miners, an event log and a Robinhood Chain block lane (simulated).
 - Progress autosaves to `localStorage`; offline earnings are credited at 50% for up to 2 hours. A wallet linked through the waitlist shows in the top bar.
 
-Nothing in the beta is on-chain yet. Balancing constants are at the top of `play/game.js`.
+**Mining Pass required.** Before the rig starts, the player connects a wallet (picker with every detected wallet) on Robinhood Chain and must hold a **VOZZ Mining Pass** NFT, minted in-game for **0.001 ETH** (one per wallet). Progress is saved per wallet. Until the contract is deployed and its address is in `config.js`, the game shows "Mint opens soon" and stays locked. See `contracts/README.md` to deploy.
+
+The mining itself and VOZZ balances are still simulated in the browser; only the Mining Pass is on-chain. Balancing constants are at the top of `play/game.js`.
 
 ## Running
 
