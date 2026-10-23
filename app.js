@@ -1,8 +1,12 @@
 /*
- * VOZZ — waitlist page logic: live stats, beta countdown, and the signup form.
+ * VOZZ — waitlist page logic: live stats, beta countdown, and the signup flow.
+ *
+ * Joining is a two-step flow inside a modal: complete four X (Twitter) missions
+ * in order, then paste a wallet address. X actions can't be verified from the
+ * browser, so a mission counts as done once its intent link has been opened.
  *
  * Signups are stored in localStorage by default. To collect them on a server,
- * set WAITLIST_ENDPOINT to a URL that accepts a JSON POST: { email, ref }.
+ * set WAITLIST_ENDPOINT to a URL that accepts a JSON POST: { wallet, ref, tasks }.
  */
 (() => {
   const WAITLIST_ENDPOINT = ""; // e.g. "https://api.example.com/waitlist"
@@ -11,22 +15,65 @@
   const STORAGE_KEY = "vozz-waitlist";
   const STARTER_GPUS = ["VX 5070", "RZ 6800 XT", "VX 6090", "RZ 7900"];
 
+  // X account and post used for the missions — replace with the real ones.
+  const X_HANDLE = "vozzgame";
+  const X_POST_ID = "1850000000000000000";
+  const VERIFY_MS = 3500; // fake "verifying" delay after a mission link is opened
+  const TASKS_KEY = "vozz-tasks";
+
+  const TASKS = [
+    {
+      id: "follow",
+      title: `Follow @${X_HANDLE} on X`,
+      desc: "Stay up to date with VOZZ news.",
+      action: "Follow",
+      url: `https://x.com/intent/follow?screen_name=${X_HANDLE}`,
+    },
+    {
+      id: "like",
+      title: "Like the post",
+      desc: "Show some love for the announcement.",
+      action: "Like",
+      url: `https://x.com/intent/like?tweet_id=${X_POST_ID}`,
+    },
+    {
+      id: "recast",
+      title: "Recast the post",
+      desc: "Repost it to your followers.",
+      action: "Recast",
+      url: `https://x.com/intent/retweet?tweet_id=${X_POST_ID}`,
+    },
+    {
+      id: "comment",
+      title: "Comment on the post",
+      desc: "Drop a reply and tag a fellow miner.",
+      action: "Comment",
+      url: `https://x.com/intent/post?in_reply_to=${X_POST_ID}`,
+    },
+  ];
+
   const $ = (id) => document.getElementById(id);
-  const form = $("waitlist-form");
-  const emailInput = $("email");
-  const submitBtn = $("submit-btn");
+  const joinBtn = $("join-btn");
   const msg = $("form-msg");
+  const modal = $("waitlist-modal");
+  const taskList = $("tasks");
+  const addressForm = $("address-form");
+  const walletInput = $("wallet");
+  const addressMsg = $("address-msg");
+  const addressSubmit = $("address-submit");
   const ticket = $("ticket");
   const toastEl = $("toast");
 
-  const storage = {
+  const store = (key) => ({
     get() {
-      try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || null; } catch { return null; }
+      try { return JSON.parse(localStorage.getItem(key)) || null; } catch { return null; }
     },
     set(v) {
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch { /* private mode */ }
+      try { localStorage.setItem(key, JSON.stringify(v)); } catch { /* private mode */ }
     },
-  };
+  });
+  const storage = store(STORAGE_KEY);
+  const taskStorage = store(TASKS_KEY);
 
   /* ---------- Toast ---------- */
   let toastTimer;
@@ -92,16 +139,16 @@
   setInterval(renderCountdown, 1000 * 20);
 
   /* ---------- Waitlist ---------- */
-  const isEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
+  const shortAddr = (a) => (a.length > 14 ? a.slice(0, 6) + "…" + a.slice(-4) : a);
 
   function showTicket(entry) {
     $("ticket-id").textContent = "#" + entry.id;
     $("ticket-pos").textContent = "#" + entry.position.toLocaleString("en-US");
     $("ticket-gpu").textContent = entry.gpu;
     ticket.hidden = false;
-    form.hidden = true;
+    joinBtn.hidden = true;
     msg.className = "form-msg success";
-    msg.textContent = `✓ ${entry.email} is on the list. See you in the closed beta, miner!`;
+    msg.textContent = `✓ ${shortAddr(entry.wallet || entry.email || "")} is on the list. See you in the closed beta, miner!`;
   }
 
   function referralLink(entry) {
@@ -111,24 +158,154 @@
     return url.toString();
   }
 
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const email = emailInput.value.trim().toLowerCase();
-    form.classList.remove("invalid");
+  /* ---------- Missions modal ---------- */
+  // Per-task state: undefined (todo) | "verifying" | "done". Only "done" is persisted.
+  const taskState = {};
+  for (const id of taskStorage.get() || []) taskState[id] = "done";
 
-    if (!isEmail(email)) {
-      void form.offsetWidth;
-      form.classList.add("invalid");
-      msg.className = "form-msg error";
-      msg.textContent = "✗ Please enter a valid email address.";
-      emailInput.focus();
+  const doneCount = () => TASKS.filter((t) => taskState[t.id] === "done").length;
+  const firstOpenIndex = () => TASKS.findIndex((t) => taskState[t.id] !== "done");
+
+  function renderTasks() {
+    const open = firstOpenIndex();
+    taskList.innerHTML = "";
+    TASKS.forEach((t, i) => {
+      const state = taskState[t.id] || (i > open && open !== -1 ? "locked" : "todo");
+      const li = document.createElement("li");
+      li.className = "task " + state;
+
+      const num = document.createElement("span");
+      num.className = "task-num";
+      num.textContent = state === "done" ? "✓" : String(i + 1);
+
+      const text = document.createElement("span");
+      text.className = "task-text";
+      const title = document.createElement("span");
+      title.className = "task-title";
+      title.textContent = t.title;
+      const desc = document.createElement("span");
+      desc.className = "task-desc";
+      desc.textContent = t.desc;
+      text.append(title, desc);
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "task-btn";
+      btn.disabled = state !== "todo";
+      if (state === "verifying") {
+        btn.innerHTML = '<span class="mini-spinner" aria-hidden="true"></span>Verifying';
+      } else {
+        btn.textContent = state === "done" ? "Done" : state === "locked" ? "Locked" : t.action;
+      }
+      btn.addEventListener("click", () => startTask(t));
+
+      li.append(num, text, btn);
+      taskList.append(li);
+    });
+
+    const done = doneCount();
+    $("task-progress").style.width = (done / TASKS.length) * 100 + "%";
+    $("task-count").textContent = `${done}/${TASKS.length}`;
+
+    const allDone = done === TASKS.length;
+    if (allDone && addressForm.hidden) {
+      addressForm.hidden = false;
+      walletInput.focus();
+    }
+    addressForm.hidden = !allDone;
+  }
+
+  function startTask(t) {
+    window.open(t.url, "_blank", "noopener");
+    taskState[t.id] = "verifying";
+    renderTasks();
+    setTimeout(() => {
+      taskState[t.id] = "done";
+      taskStorage.set(TASKS.filter((x) => taskState[x.id] === "done").map((x) => x.id));
+      renderTasks();
+      toast(doneCount() === TASKS.length ? "All missions complete! Paste your address." : `Mission ${TASKS.indexOf(t) + 1} complete ✓`);
+    }, VERIFY_MS);
+  }
+
+  let lastFocus = null;
+  function openModal() {
+    if (storage.get()) {
+      toast("You're already on the waitlist ✓");
+      return;
+    }
+    lastFocus = document.activeElement;
+    modal.hidden = false;
+    document.body.style.overflow = "hidden";
+    renderTasks();
+    const target = modal.querySelector(".task.todo .task-btn") || (!addressForm.hidden && walletInput) || modal.querySelector(".modal-close");
+    target.focus();
+  }
+
+  function closeModal() {
+    modal.hidden = true;
+    document.body.style.overflow = "";
+    if (lastFocus) lastFocus.focus();
+  }
+
+  document.querySelectorAll("[data-open-waitlist]").forEach((el) =>
+    el.addEventListener("click", (e) => {
+      e.preventDefault();
+      openModal();
+    })
+  );
+  modal.querySelectorAll("[data-close-modal]").forEach((el) => el.addEventListener("click", closeModal));
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !modal.hidden) closeModal();
+  });
+
+  /* ---------- Wallet address ---------- */
+  const isEvm = (v) => /^0x[a-fA-F0-9]{40}$/.test(v);
+  const isSolana = (v) => /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(v);
+  const isWallet = (v) => isEvm(v) || isSolana(v);
+
+  function addressError(text) {
+    const wrap = walletInput.closest(".address-input");
+    wrap.classList.remove("invalid");
+    void wrap.offsetWidth;
+    wrap.classList.add("invalid");
+    addressMsg.className = "form-msg error";
+    addressMsg.textContent = text;
+  }
+
+  $("paste-btn").addEventListener("click", async () => {
+    try {
+      walletInput.value = (await navigator.clipboard.readText()).trim();
+      walletInput.dispatchEvent(new Event("input"));
+    } catch {
+      toast("Press Ctrl+V / ⌘V to paste");
+    }
+    walletInput.focus();
+  });
+
+  walletInput.addEventListener("input", () => {
+    walletInput.closest(".address-input").classList.remove("invalid");
+    addressMsg.className = "form-msg";
+    addressMsg.textContent = "";
+  });
+
+  addressForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const wallet = walletInput.value.trim();
+
+    if (doneCount() !== TASKS.length) {
+      addressError("✗ Complete all missions first.");
+      return;
+    }
+    if (!isWallet(wallet)) {
+      addressError("✗ That doesn't look like a valid wallet address.");
+      walletInput.focus();
       return;
     }
 
-    submitBtn.disabled = true;
-    submitBtn.classList.add("loading");
-    msg.className = "form-msg";
-    msg.textContent = "> connecting to node... verifying hash...";
+    addressSubmit.disabled = true;
+    addressSubmit.classList.add("loading");
+    addressMsg.className = "form-msg";
+    addressMsg.textContent = "> connecting to node... verifying hash...";
 
     const ref = new URLSearchParams(window.location.search).get("ref") || null;
 
@@ -137,7 +314,7 @@
         const res = await fetch(WAITLIST_ENDPOINT, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, ref }),
+          body: JSON.stringify({ wallet, ref, tasks: TASKS.map((t) => t.id) }),
         });
         if (!res.ok) throw new Error("HTTP " + res.status);
       } else {
@@ -149,7 +326,7 @@
       bump(statWait);
 
       const entry = {
-        email,
+        wallet,
         ref,
         id: Math.random().toString(16).slice(2, 8).toUpperCase(),
         position: waitlistCount,
@@ -157,14 +334,15 @@
         createdAt: new Date().toISOString(),
       };
       storage.set(entry);
+      closeModal();
       showTicket(entry);
       toast("⛏  Spot secured! +500 VZ");
     } catch (err) {
-      msg.className = "form-msg error";
-      msg.textContent = "✗ Connection failed. Please try again in a moment.";
+      addressMsg.className = "form-msg error";
+      addressMsg.textContent = "✗ Connection failed. Please try again in a moment.";
     } finally {
-      submitBtn.disabled = false;
-      submitBtn.classList.remove("loading");
+      addressSubmit.disabled = false;
+      addressSubmit.classList.remove("loading");
     }
   });
 

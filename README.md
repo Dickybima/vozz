@@ -22,8 +22,26 @@ No build step — open `index.html` in a browser, or:
 python3 -m http.server 8000
 ```
 
+## Waitlist flow
+
+Clicking **Join Waitlist** opens a modal with 4 missions that unlock in order:
+
+1. Follow on X
+2. Like the post
+3. Recast (repost) the post
+4. Comment on the post
+
+Each mission button opens the matching X intent link in a new tab, then marks the mission done after a short "verifying" delay. X actions can't be verified from the browser alone, so this only confirms that the link was opened. Once all 4 are done, the wallet address step appears, with a **Paste** button. It accepts EVM (`0x…`) or Solana addresses.
+
+Set the X account and post in `app.js`:
+
+```js
+const X_HANDLE = "vozzgame";
+const X_POST_ID = "1850000000000000000";
+```
+
 ## Storing waitlist signups
 
-By default signups are only saved in the visitor's browser (`localStorage`). To collect real emails, set `WAITLIST_ENDPOINT` in `app.js` to a URL that accepts a JSON `POST` of `{ email, ref }` (e.g. Formspree, Supabase, or your own API).
+By default signups are only saved in the visitor's browser (`localStorage`). To collect real signups, set `WAITLIST_ENDPOINT` in `app.js` to a URL that accepts a JSON `POST` of `{ wallet, ref, tasks }` (e.g. Formspree, Supabase, or your own API).
 
 The beta date is set via `BETA_DATE` in `app.js`.

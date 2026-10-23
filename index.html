@@ -26,7 +26,7 @@
       <a href="#features">Features</a>
       <a href="#roadmap">Roadmap</a>
       <a href="#faq">FAQ</a>
-      <a href="#join" class="btn btn-small">Join Waitlist</a>
+      <a href="#join" class="btn btn-small" data-open-waitlist>Join Waitlist</a>
     </nav>
   </header>
 
@@ -52,24 +52,10 @@
         simulation game ever made &mdash; and you could be one of the first to play it.
       </p>
 
-      <form class="waitlist-form" id="waitlist-form" novalidate>
-        <div class="input-wrap">
-          <span class="prompt" aria-hidden="true">&gt;_</span>
-          <input
-            type="email"
-            id="email"
-            name="email"
-            placeholder="you@email.com"
-            autocomplete="email"
-            required
-            aria-label="Email address"
-          />
-        </div>
-        <button type="submit" class="btn btn-primary" id="submit-btn">
-          <span class="btn-label">Claim My Spot</span>
-          <span class="btn-spinner" aria-hidden="true"></span>
-        </button>
-      </form>
+      <button type="button" class="btn btn-primary btn-cta" id="join-btn" data-open-waitlist>
+        <span class="btn-label">Join Waitlist</span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
       <p class="form-msg" id="form-msg" role="status" aria-live="polite"></p>
 
       <div class="ticket" id="ticket" hidden>
@@ -207,6 +193,38 @@
     </span>
     <span class="footer-hash" id="footer-hash">0x0000000000000000</span>
   </footer>
+
+  <!-- Waitlist missions modal -->
+  <div class="modal" id="waitlist-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" hidden>
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-panel">
+      <button type="button" class="modal-close" data-close-modal aria-label="Close">&times;</button>
+      <img class="modal-mark" src="assets/logo-mark.svg" alt="" width="56" height="56" />
+      <h2 id="modal-title">Join the Waitlist</h2>
+      <p class="modal-sub">Complete all 4 missions to unlock your spot.</p>
+
+      <div class="progress">
+        <div class="progress-track"><div class="progress-bar" id="task-progress"></div></div>
+        <span class="progress-count" id="task-count">0/4</span>
+      </div>
+
+      <ol class="tasks" id="tasks"></ol>
+
+      <form class="address-step" id="address-form" novalidate hidden>
+        <label for="wallet">Paste your wallet address</label>
+        <div class="input-wrap address-input">
+          <span class="prompt" aria-hidden="true">&gt;_</span>
+          <input type="text" id="wallet" name="wallet" placeholder="0x..." autocomplete="off" spellcheck="false" required />
+          <button type="button" class="paste-btn" id="paste-btn">Paste</button>
+        </div>
+        <p class="form-msg" id="address-msg" role="status" aria-live="polite"></p>
+        <button type="submit" class="btn btn-primary" id="address-submit">
+          <span class="btn-label">Submit Address</span>
+          <span class="btn-spinner" aria-hidden="true"></span>
+        </button>
+      </form>
+    </div>
+  </div>
 
   <div class="toast" id="toast" role="alert" aria-live="assertive"></div>
 
