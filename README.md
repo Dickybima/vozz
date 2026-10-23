@@ -13,6 +13,7 @@ Waitlist landing page for VOZZ, a GPU-themed mining simulation game built on **R
 - `assets/logo.svg` — full logo (mark + wordmark)
 - `assets/logo-mark.svg` — logo mark only (hex GPU chip with a V and a mined block)
 - `favicon.svg` — simplified mark for small sizes
+- `assets/brand/` — logo exports: SVG + PNG mark (512/1024, transparent), full logo (transparent and on dark), 1000×1000 avatar and 1500×500 X banner
 - `assets/beta-mining.mp4` / `.webm` + `beta-mining-poster.jpg` — 38s "Beta Mining Gameplay" video, opened from the **Beta Gameplay** item in the top menu
 - `video/beta-demo.html` — source of that video (a scripted canvas mock of the beta UI; open it in a browser to preview in real time)
 - `video/render.js` — renders the video frame by frame and encodes it
