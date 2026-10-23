@@ -409,7 +409,7 @@
       storage.set(entry);
       closeModal();
       showTicket(entry);
-      toast("⛏  Spot secured! +500 VZ");
+      toast("⛏  Spot secured! +500 VOZZ");
     } catch (err) {
       addressMsg.className = "form-msg error";
       addressMsg.textContent = "✗ Connection failed. Please try again in a moment.";

@@ -180,7 +180,7 @@
     if (S.chain.length > 12) S.chain.shift();
     S.blockFlash = 1;
     S.pulses.push({ a: 1, r: 0 });
-    addLog(`BLOCK #${fmt(S.height - 1, 0)} FOUND  +${reward} VZ → 0x7a3f…c91e`, C.green);
+    addLog(`BLOCK #${fmt(S.height - 1, 0)} FOUND  +${reward} VOZZ → 0x7a3f…c91e`, C.green);
   }
 
   /* ---------- drawing: background ---------- */
@@ -223,7 +223,7 @@
     const stats = [
       ["HASHRATE", fmt(S.total, 1) + " MH/s", C.green],
       ["BLOCK", "#" + fmt(S.height, 0), C.text],
-      ["BALANCE", fmt(S.balance, 2) + " VZ", C.amber],
+      ["BALANCE", fmt(S.balance, 2) + " VOZZ", C.amber],
     ];
     let x = W - 24;
     for (let i = stats.length - 1; i >= 0; i--) {
@@ -581,8 +581,8 @@
     const a = Math.min(1, S.blockFlash * 1.6);
     ctx.globalAlpha = a;
     const x = BL.x + BL.w - 250, y = BL.y - 20;
-    ctx.fillStyle = "rgba(0,255,170,0.95)"; rr(x, y, 230, 30, 8); ctx.fill();
-    text("BLOCK FOUND  +6.25 VZ", x + 115, y + 20, `900 12px ${DISPLAY}`, "#02110b", "center");
+    ctx.fillStyle = "rgba(0,255,170,0.95)"; rr(x - 30, y, 260, 30, 8); ctx.fill();
+    text("BLOCK FOUND  +6.25 VOZZ", x + 100, y + 20, `900 12px ${DISPLAY}`, "#02110b", "center");
     ctx.globalAlpha = 1;
   }
 

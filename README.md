@@ -26,8 +26,8 @@ Waitlist landing page for VOZZ, a GPU-themed mining simulation game built on **R
 - **Rig:** buy GPUs (6 models) into slots; sell for 50% back. Each card shows live hashrate, temperature, wattage and spinning fans.
 - **Overclock:** core / memory / power limit / fan sliders trade hashrate against heat and power bill. Cards throttle at 88°C and crash for 8s at 100°C.
 - **Upgrades:** rig slots (4 → 12), PSU wattage (cards beyond PSU capacity get no power), cooling.
-- **Mining:** the simulated network finds a block about every 10s (50 VZ reward). Pool mining (NEON-FORGE steady, HashLords variable) pays your share of every block; solo mining wins whole blocks by chance. Network hashrate and difficulty grow over time.
-- **Missions** with VZ rewards, a leaderboard against simulated miners, an event log and a Robinhood Chain block lane (simulated).
+- **Mining:** the simulated network finds a block about every 10s (50 VOZZ reward). Pool mining (NEON-FORGE steady, HashLords variable) pays your share of every block; solo mining wins whole blocks by chance. Network hashrate and difficulty grow over time.
+- **Missions** with VOZZ rewards, a leaderboard against simulated miners, an event log and a Robinhood Chain block lane (simulated).
 - Progress autosaves to `localStorage`; offline earnings are credited at 50% for up to 2 hours. A wallet linked through the waitlist shows in the top bar.
 
 Nothing in the beta is on-chain yet. Balancing constants are at the top of `play/game.js`.

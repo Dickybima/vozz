@@ -2,7 +2,7 @@
  * VOZZ — playable closed-beta prototype.
  *
  * An idle GPU-mining game: buy GPUs into a rig, tune clocks/power/fans, keep temps
- * under control, and earn VZ from a simulated network that finds a block about every
+ * under control, and earn VOZZ from a simulated network that finds a block about every
  * 10 seconds. Mine in a pool (steady share of every block) or solo (win whole blocks).
  *
  * Everything runs client-side; progress is saved to localStorage. Nothing here touches
@@ -13,12 +13,12 @@
   const SAVE_KEY = "vozz-beta-save";
   const WAITLIST_KEY = "vozz-waitlist";
   const START_BALANCE = 10;
-  const BLOCK_REWARD = 50; // VZ
+  const BLOCK_REWARD = 50; // VOZZ
   const BLOCK_TIME = 10; // seconds, average
   const BASE_NET = 3000; // MH/s of everyone else at the start
   const NET_GROWTH = 1.004; // network grows a little every block (difficulty)
   const NET_CAP = BASE_NET * 40;
-  const ELEC = 0.0001; // VZ per watt per second
+  const ELEC = 0.0001; // VOZZ per watt per second
   const AMBIENT = 27; // °C
   const THROTTLE_AT = 88;
   const CRASH_AT = 100;
@@ -46,7 +46,7 @@
   const POOLS = [
     { id: "neon", name: "NEON-FORGE", fee: 0.02, desc: "PPS · steady payout every block · 2% fee" },
     { id: "hash", name: "HashLords", fee: 0.01, variance: 0.4, desc: "PPLNS · 1% fee · payouts swing ±40%" },
-    { id: "solo", name: "Solo mining", fee: 0, solo: true, desc: "No fee · win the full 50 VZ block — or nothing" },
+    { id: "solo", name: "Solo mining", fee: 0, solo: true, desc: "No fee · win the full 50 VOZZ block — or nothing" },
   ];
   const OTHER_FINDERS = ["NEON-FORGE", "HashLords", "Silicon Cartel", "Block Party", "0xd4e…91a", "0x7bc…02f", "Kilowatt Kids"];
 
@@ -149,11 +149,11 @@
   function buyGpu(m) {
     if (S.gpus.length >= slotCount()) return toast("No free slot — expand your rig in Upgrades");
     const cost = priceOf(m);
-    if (!spend(cost)) return toast("Not enough VZ");
+    if (!spend(cost)) return toast("Not enough VOZZ");
     const g = { id: uid(), model: m.id, paid: cost };
     S.gpus.push(g);
     R[g.id] = { temp: AMBIENT, crashUntil: 0, flash: 0 };
-    log(`Installed ${m.name} for ${fmtVZ(cost)} VZ`, "c-cyan");
+    log(`Installed ${m.name} for ${fmtVZ(cost)} VOZZ`, "c-cyan");
     buildRig();
     refreshLists(true);
     save();
@@ -168,7 +168,7 @@
     S.gpus.splice(i, 1);
     delete R[g.id];
     S.balance += refund;
-    log(`Sold ${MODEL[g.model].name} for ${fmtVZ(refund)} VZ`, "muted");
+    log(`Sold ${MODEL[g.model].name} for ${fmtVZ(refund)} VOZZ`, "muted");
     buildRig();
     refreshLists(true);
     save();
@@ -232,8 +232,8 @@
         by = "YOU";
         gain = BLOCK_REWARD;
         S.stats.soloBlocks++;
-        log(`★ YOU FOUND BLOCK #${S.height.toLocaleString("en-US")} — +${BLOCK_REWARD} VZ`, "c-green");
-        toast(`★ Block found! +${BLOCK_REWARD} VZ`, true);
+        log(`★ YOU FOUND BLOCK #${S.height.toLocaleString("en-US")} — +${BLOCK_REWARD} VOZZ`, "c-green");
+        toast(`★ Block found! +${BLOCK_REWARD} VOZZ`, true);
       } else {
         by = OTHER_FINDERS[(Math.random() * OTHER_FINDERS.length) | 0];
       }
@@ -244,7 +244,7 @@
       by = poolFound ? p.name : OTHER_FINDERS.filter((f) => f !== p.name)[(Math.random() * (OTHER_FINDERS.length - 1)) | 0];
       if (gain > 0) {
         S.stats.payouts++;
-        log(`#${S.height.toLocaleString("en-US")} by ${by} · pool payout +${gain.toFixed(3)} VZ`, poolFound ? "c-cyan" : "");
+        log(`#${S.height.toLocaleString("en-US")} by ${by} · pool payout +${gain.toFixed(3)} VOZZ`, poolFound ? "c-cyan" : "");
       }
     }
 
@@ -286,7 +286,7 @@
         <div class="fans"><div class="fan">${BLADES}</div><div class="fan">${BLADES}</div></div>
         <div class="gpu-stats"><span class="g-hash c-green">0 MH/s</span><span class="g-temp">0°C</span></div>
         <div class="temp-bar"><div class="temp-fill"></div></div>
-        <div class="gpu-foot"><span class="g-watt">0 W</span><button class="sell-btn" type="button">Sell ${fmtVZ(g.paid * 0.5)} VZ</button></div>`;
+        <div class="gpu-foot"><span class="g-watt">0 W</span><button class="sell-btn" type="button">Sell ${fmtVZ(g.paid * 0.5)} VOZZ</button></div>`;
       card.querySelector(".sell-btn").addEventListener("click", () => sellGpu(g.id));
       grid.append(card);
       cards.set(g.id, {
@@ -388,7 +388,7 @@
       if (full) box.append(el("p", "hint", "All slots are full — expand the rig in Upgrades or sell a card."));
       MODELS.forEach((m, i) => {
         const price = priceOf(m);
-        item(box, "GPU", m.name, `${m.hash} MH/s · ${m.watt} W · ${(m.hash / m.watt * 1000).toFixed(0)} KH/W`, fmtVZ(price) + " VZ", () => buyGpu(m), {
+        item(box, "GPU", m.name, `${m.hash} MH/s · ${m.watt} W · ${(m.hash / m.watt * 1000).toFixed(0)} KH/W`, fmtVZ(price) + " VOZZ", () => buyGpu(m), {
           disabled: full || bal < price,
         });
       });
@@ -396,23 +396,23 @@
 
     renderIfChanged("tab-upgrades", [S.slotLvl, S.psuLvl, S.coolLvl, bal >= (SLOT_COST[S.slotLvl] || 1e9), bal >= (PSU_COST[S.psuLvl] || 1e9), bal >= (COOL_COST[S.coolLvl] || 1e9)].join("|"), (box) => {
       const slotMax = S.slotLvl >= SLOT_COST.length;
-      item(box, "▦", "Rig frame", slotMax ? `${slotCount()} slots · maxed` : `${slotCount()} → ${SLOT_LEVELS[S.slotLvl + 1]} GPU slots`, slotMax ? "MAX" : fmtVZ(SLOT_COST[S.slotLvl]) + " VZ", () => {
+      item(box, "▦", "Rig frame", slotMax ? `${slotCount()} slots · maxed` : `${slotCount()} → ${SLOT_LEVELS[S.slotLvl + 1]} GPU slots`, slotMax ? "MAX" : fmtVZ(SLOT_COST[S.slotLvl]) + " VOZZ", () => {
         if (spend(SLOT_COST[S.slotLvl])) { S.slotLvl++; log(`Rig expanded to ${slotCount()} slots`, "c-cyan"); buildRig(); refreshLists(true); save(); }
       }, { disabled: slotMax || bal < SLOT_COST[S.slotLvl] });
 
       const psuMax = S.psuLvl >= PSU_COST.length;
-      item(box, "⚡", "Power supply", psuMax ? `${psuCap()} W · maxed` : `${psuCap()} W → ${PSU[S.psuLvl + 1]} W`, psuMax ? "MAX" : fmtVZ(PSU_COST[S.psuLvl]) + " VZ", () => {
+      item(box, "⚡", "Power supply", psuMax ? `${psuCap()} W · maxed` : `${psuCap()} W → ${PSU[S.psuLvl + 1]} W`, psuMax ? "MAX" : fmtVZ(PSU_COST[S.psuLvl]) + " VOZZ", () => {
         if (spend(PSU_COST[S.psuLvl])) { S.psuLvl++; log(`PSU upgraded to ${psuCap()} W`, "c-cyan"); refreshLists(true); save(); }
       }, { disabled: psuMax || bal < PSU_COST[S.psuLvl] });
 
       const coolMax = S.coolLvl >= COOL_COST.length;
-      item(box, "❄", "Cooling", coolMax ? `Level ${S.coolLvl} · maxed` : `Level ${S.coolLvl} → ${S.coolLvl + 1} · -${Math.round((1 - (1 + 0.22 * S.coolLvl) / (1 + 0.22 * (S.coolLvl + 1))) * 100)}% heat`, coolMax ? "MAX" : fmtVZ(COOL_COST[S.coolLvl]) + " VZ", () => {
+      item(box, "❄", "Cooling", coolMax ? `Level ${S.coolLvl} · maxed` : `Level ${S.coolLvl} → ${S.coolLvl + 1} · -${Math.round((1 - (1 + 0.22 * S.coolLvl) / (1 + 0.22 * (S.coolLvl + 1))) * 100)}% heat`, coolMax ? "MAX" : fmtVZ(COOL_COST[S.coolLvl]) + " VOZZ", () => {
         if (spend(COOL_COST[S.coolLvl])) { S.coolLvl++; log(`Cooling upgraded to level ${S.coolLvl}`, "c-cyan"); refreshLists(true); save(); }
       }, { disabled: coolMax || bal < COOL_COST[S.coolLvl] });
     });
 
     renderIfChanged("tab-pool", S.pool, (box) => {
-      box.append(el("p", "hint", `The network finds a block about every ${BLOCK_TIME}s. Block reward: ${BLOCK_REWARD} VZ. Difficulty rises as the network grows.`));
+      box.append(el("p", "hint", `The network finds a block about every ${BLOCK_TIME}s. Block reward: ${BLOCK_REWARD} VOZZ. Difficulty rises as the network grows.`));
       POOLS.forEach((p) => {
         const sel = S.pool === p.id;
         item(box, p.solo ? "SOLO" : "POOL", p.name, p.desc, sel ? "MINING ✓" : "SWITCH", () => {
@@ -432,12 +432,12 @@
     renderIfChanged("tab-missions", states.join(""), (box) => {
       MISSIONS.forEach((m, i) => {
         const st = states[i];
-        item(box, st === "c" ? "✓" : String(i + 1), m.text, `Reward: ${m.reward} VZ`, st === "c" ? "CLAIMED" : st === "r" ? "CLAIM" : "LOCKED", () => {
+        item(box, st === "c" ? "✓" : String(i + 1), m.text, `Reward: ${m.reward} VOZZ`, st === "c" ? "CLAIMED" : st === "r" ? "CLAIM" : "LOCKED", () => {
           if (S.claimed[m.id] || !m.done()) return;
           S.claimed[m.id] = true;
           S.balance += m.reward;
-          log(`Mission complete: ${m.text} (+${m.reward} VZ)`, "c-green");
-          toast(`✓ Mission complete! +${m.reward} VZ`);
+          log(`Mission complete: ${m.text} (+${m.reward} VOZZ)`, "c-green");
+          toast(`✓ Mission complete! +${m.reward} VOZZ`);
           bump($("t-bal"));
           refreshLists();
           save();
@@ -518,7 +518,7 @@
     list.innerHTML = "";
     standings().forEach((r, i) => {
       const li = el("li", r.me ? "me" : "");
-      li.append(el("span", "", "#" + (i + 1)), el("span", "", ""), el("span", "", fmtVZ(r.total) + " VZ"));
+      li.append(el("span", "", "#" + (i + 1)), el("span", "", ""), el("span", "", fmtVZ(r.total) + " VOZZ"));
       li.children[1].textContent = r.me ? "You" + (S.wallet ? " (" + short(S.wallet) + ")" : "") : r.name;
       list.append(li);
     });
@@ -531,7 +531,7 @@
     $("t-rate").textContent = (r >= 0 ? "+" : "") + r.toFixed(3);
     $("t-rate").className = r >= 0 ? "c-green" : "c-red";
     $("t-height").textContent = "#" + S.height.toLocaleString("en-US");
-    $("t-bal").textContent = fmtVZ(S.balance) + " VZ";
+    $("t-bal").textContent = fmtVZ(S.balance) + " VOZZ";
     $("chart-val").textContent = fmtHash(live.hash);
     $("net-hash").textContent = fmtHash(live.N || S.netBase);
     $("net-share").textContent = ((live.hash / (live.N || 1)) * 100).toFixed(2) + "%";
@@ -698,14 +698,14 @@
     S.balance += gain;
     S.totalMined += gain;
     const mins = Math.round(secs / 60);
-    log(`While you were away (${mins} min): +${fmtVZ(gain)} VZ`, "c-green");
-    toast(`Welcome back! Your rig mined +${fmtVZ(gain)} VZ`, true);
+    log(`While you were away (${mins} min): +${fmtVZ(gain)} VOZZ`, "c-green");
+    toast(`Welcome back! Your rig mined +${fmtVZ(gain)} VOZZ`, true);
     save();
   }
 
   /* ---------- Buttons ---------- */
   function showWelcome() {
-    $("welcome-sub").textContent = `Your rig is online with a starter ${S.starter} and ${START_BALANCE} VZ.`;
+    $("welcome-sub").textContent = `Your rig is online with a starter ${S.starter} and ${START_BALANCE} VOZZ.`;
     $("welcome").hidden = false;
     $("welcome-go").focus();
   }
