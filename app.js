@@ -26,8 +26,8 @@
   const STARTER_GPUS = ["VX 5070", "RZ 6800 XT", "VX 6090", "RZ 7900"];
 
   // X account and post used for the missions — replace with the real ones.
-  const X_HANDLE = "vozzgame";
-  const X_POST_ID = "1850000000000000000";
+  const X_HANDLE = "vozzGPU";
+  const X_POST_ID = "2113652208571228400";
   const VERIFY_MS = 3500; // fake "verifying" delay after a mission link is opened
   const TASKS_KEY = "vozz-tasks";
 
@@ -47,10 +47,10 @@
       url: `https://x.com/intent/like?tweet_id=${X_POST_ID}`,
     },
     {
-      id: "recast",
-      title: "Recast the post",
-      desc: "Repost it to your followers.",
-      action: "Recast",
+      id: "repost",
+      title: "Repost the post",
+      desc: "Share it with your followers.",
+      action: "Repost",
       url: `https://x.com/intent/retweet?tweet_id=${X_POST_ID}`,
     },
     {

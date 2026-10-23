@@ -56,7 +56,7 @@ Clicking **Join Waitlist** opens a modal with 4 missions that unlock in order:
 
 1. Follow on X
 2. Like the post
-3. Recast (repost) the post
+3. Repost the post
 4. Comment on the post
 
 Each mission button opens the matching X intent link in a new tab, then marks the mission done after a short "verifying" delay. X actions can't be verified from the browser alone, so this only confirms that the link was opened. Once all 4 are done, the Robinhood Chain wallet address step appears, with a **Paste** button. Only EVM addresses (`0x` + 40 hex characters) are accepted. There is also an optional **Connect wallet & add Robinhood Chain** button that reads the address from an injected wallet (e.g. MetaMask) and switches it to — or adds — Robinhood Chain.
@@ -64,8 +64,8 @@ Each mission button opens the matching X intent link in a new tab, then marks th
 Set the X account and post in `app.js`:
 
 ```js
-const X_HANDLE = "vozzgame";
-const X_POST_ID = "1850000000000000000";
+const X_HANDLE = "vozzGPU";
+const X_POST_ID = "2113652208571228400";
 ```
 
 ## Robinhood Chain
