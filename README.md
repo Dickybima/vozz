@@ -1,24 +1,29 @@
+<p align="center"><img src="assets/logo.svg" alt="VOZZ" width="360"></p>
+
 # VOZZ — GPU Mining Game Waitlist
 
-Landing page waitlist untuk VOZZ, game simulasi mining bertema GPU, dengan background simulasi mining GPU yang bergerak (canvas).
+Waitlist landing page for VOZZ, a GPU-themed mining simulation game, with an animated GPU mining simulation running in the background (canvas).
 
-## Isi
+## Files
 
-- `index.html` — struktur halaman (hero + form waitlist, fitur, roadmap, FAQ)
-- `style.css` — tema neon/cyberpunk, responsif
-- `background.js` — simulasi mining di canvas: dinding GPU dengan kipas berputar & lampu RGB, hash rain, partikel *share* yang terbang ke blok, dan blockchain yang bergeser tiap kali blok ditemukan
-- `app.js` — statistik live, countdown beta, form waitlist & tiket "Miner License"
+- `index.html` — page structure (hero + waitlist form, features, roadmap, FAQ)
+- `style.css` — neon/cyberpunk theme, responsive
+- `background.js` — canvas mining simulation: a wall of GPUs with spinning fans & RGB lighting, hash rain, *share* particles flying to the block being mined, and a blockchain that slides along every time a block is found
+- `app.js` — live stats, beta countdown, waitlist form & "Miner License" ticket
+- `assets/logo.svg` — full logo (mark + wordmark)
+- `assets/logo-mark.svg` — logo mark only (hex GPU chip with a V and a mined block)
+- `favicon.svg` — simplified mark for small sizes
 
-## Menjalankan
+## Running
 
-Tanpa build step — buka `index.html` di browser, atau:
+No build step — open `index.html` in a browser, or:
 
 ```bash
 python3 -m http.server 8000
 ```
 
-## Menyimpan data waitlist
+## Storing waitlist signups
 
-Secara default pendaftaran hanya disimpan di `localStorage` browser. Untuk mengumpulkan email sungguhan, isi `WAITLIST_ENDPOINT` di `app.js` dengan URL yang menerima `POST` JSON `{ email, ref }` (mis. Formspree, Supabase, atau API sendiri).
+By default signups are only saved in the visitor's browser (`localStorage`). To collect real emails, set `WAITLIST_ENDPOINT` in `app.js` to a URL that accepts a JSON `POST` of `{ email, ref }` (e.g. Formspree, Supabase, or your own API).
 
-Tanggal beta diatur lewat `BETA_DATE` di `app.js`.
+The beta date is set via `BETA_DATE` in `app.js`.

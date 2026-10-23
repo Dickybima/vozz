@@ -1,11 +1,12 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>VOZZ — GPU Mining Game | Waitlist</title>
-  <meta name="description" content="VOZZ adalah game simulasi mining bertema GPU. Bangun rig, overclock kartu grafis, dan tambang blok pertamamu. Gabung waitlist sekarang." />
+  <title>VOZZ — GPU Mining Game | Join the Waitlist</title>
+  <meta name="description" content="VOZZ is a GPU mining simulation game. Build your rig, overclock your graphics cards, and mine your first block. Join the waitlist now." />
   <meta name="theme-color" content="#05070d" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -18,23 +19,26 @@
   <div class="scanlines" aria-hidden="true"></div>
 
   <header class="nav">
-    <a href="#" class="logo">
-      <span class="logo-chip" aria-hidden="true"></span>
-      VOZZ
+    <a href="#" class="logo" aria-label="VOZZ home">
+      <img src="assets/logo.svg" alt="VOZZ" width="123" height="40" />
     </a>
     <nav class="nav-links">
-      <a href="#features">Fitur</a>
+      <a href="#features">Features</a>
       <a href="#roadmap">Roadmap</a>
       <a href="#faq">FAQ</a>
-      <a href="#join" class="btn btn-small">Gabung Waitlist</a>
+      <a href="#join" class="btn btn-small">Join Waitlist</a>
     </nav>
   </header>
 
   <main>
     <!-- HERO -->
     <section class="hero" id="join">
+      <div class="hero-mark" aria-hidden="true">
+        <img src="assets/logo-mark.svg" alt="" width="112" height="112" />
+      </div>
+
       <div class="status-pill">
-        <span class="dot"></span> Rig online &middot; Closed beta segera dibuka
+        <span class="dot"></span> Rigs online &middot; Closed beta opening soon
       </div>
 
       <h1 class="title">
@@ -43,9 +47,9 @@
       </h1>
 
       <p class="subtitle">
-        Bangun rig GPU impianmu, overclock tiap kartu sampai batas, jaga suhu tetap dingin,
-        dan berlomba menemukan blok berikutnya. <strong>VOZZ</strong> adalah game simulasi
-        mining paling realistis &mdash; dan kamu bisa jadi yang pertama memainkannya.
+        Build your dream GPU rig, push every card to its limit, keep the temps in check,
+        and race to find the next block. <strong>VOZZ</strong> is the most realistic mining
+        simulation game ever made &mdash; and you could be one of the first to play it.
       </p>
 
       <form class="waitlist-form" id="waitlist-form" novalidate>
@@ -55,14 +59,14 @@
             type="email"
             id="email"
             name="email"
-            placeholder="email@kamu.com"
+            placeholder="you@email.com"
             autocomplete="email"
             required
-            aria-label="Alamat email"
+            aria-label="Email address"
           />
         </div>
         <button type="submit" class="btn btn-primary" id="submit-btn">
-          <span class="btn-label">Amankan Slot</span>
+          <span class="btn-label">Claim My Spot</span>
           <span class="btn-spinner" aria-hidden="true"></span>
         </button>
       </form>
@@ -75,7 +79,7 @@
         </div>
         <div class="ticket-body">
           <div>
-            <small>Posisi antrian</small>
+            <small>Queue position</small>
             <strong id="ticket-pos">—</strong>
           </div>
           <div>
@@ -87,7 +91,7 @@
             <strong>+500 VZ</strong>
           </div>
         </div>
-        <button class="btn btn-ghost btn-small" id="share-btn" type="button">Salin link referral</button>
+        <button class="btn btn-ghost btn-small" id="share-btn" type="button">Copy referral link</button>
       </div>
 
       <div class="stats">
@@ -96,15 +100,15 @@
           <span class="stat-value" id="stat-hashrate">0.00 TH/s</span>
         </div>
         <div class="stat">
-          <span class="stat-label">Blok Ditemukan</span>
+          <span class="stat-label">Blocks Found</span>
           <span class="stat-value" id="stat-blocks">0</span>
         </div>
         <div class="stat">
-          <span class="stat-label">Miner di Waitlist</span>
+          <span class="stat-label">Miners Waiting</span>
           <span class="stat-value" id="stat-waitlist">0</span>
         </div>
         <div class="stat">
-          <span class="stat-label">Beta Dibuka</span>
+          <span class="stat-label">Beta Opens In</span>
           <span class="stat-value" id="stat-countdown">--d --h --m</span>
         </div>
       </div>
@@ -112,35 +116,35 @@
 
     <!-- FEATURES -->
     <section class="section" id="features">
-      <h2 class="section-title"><span>01</span> Fitur Game</h2>
+      <h2 class="section-title"><span>01</span> Game Features</h2>
       <div class="features">
         <article class="card">
           <div class="card-icon">
             <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="4" y="12" width="40" height="22" rx="3"/><circle cx="17" cy="23" r="6"/><circle cx="33" cy="23" r="6"/><path d="M8 34v4M14 34v4M20 34v4"/></svg>
           </div>
-          <h3>Bangun Rig-mu</h3>
-          <p>Rakit rig dari puluhan model GPU, PSU, riser, dan frame. Setiap komponen punya hashrate, konsumsi daya, dan suhu yang berbeda.</p>
+          <h3>Build Your Rig</h3>
+          <p>Assemble rigs from dozens of GPUs, PSUs, risers, and frames. Every part has its own hashrate, power draw, and thermal profile.</p>
         </article>
         <article class="card">
           <div class="card-icon">
             <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M24 6v8M24 34v8M6 24h8M34 24h8"/><circle cx="24" cy="24" r="10"/><path d="M24 18v6l4 3"/></svg>
           </div>
-          <h3>Overclock &amp; Tuning</h3>
-          <p>Atur core clock, memory clock, dan power limit. Dorong performa maksimal &mdash; tapi hati-hati, kartu bisa overheat dan crash.</p>
+          <h3>Overclock &amp; Tune</h3>
+          <p>Dial in core clock, memory clock, and power limit. Squeeze out every last hash &mdash; but push too hard and your cards will overheat and crash.</p>
         </article>
         <article class="card">
           <div class="card-icon">
             <svg viewBox="0 0 48 48" aria-hidden="true"><rect x="6" y="18" width="10" height="10" rx="1"/><rect x="19" y="18" width="10" height="10" rx="1"/><rect x="32" y="18" width="10" height="10" rx="1"/><path d="M16 23h3M29 23h3"/></svg>
           </div>
-          <h3>Blockchain Hidup</h3>
-          <p>Difficulty menyesuaikan seluruh jaringan pemain secara real-time. Temukan blok, klaim reward, dan bersaing di leaderboard global.</p>
+          <h3>A Living Blockchain</h3>
+          <p>Difficulty adjusts in real time across the entire player network. Find blocks, claim rewards, and climb the global leaderboard.</p>
         </article>
         <article class="card">
           <div class="card-icon">
             <svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="16" cy="18" r="6"/><circle cx="32" cy="18" r="6"/><path d="M6 40c0-6 4-10 10-10s10 4 10 10M22 40c0-6 4-10 10-10s10 4 10 10"/></svg>
           </div>
-          <h3>Mining Pool</h3>
-          <p>Gabung atau bikin pool bareng teman. Bagi reward, susun strategi, dan kuasai jaringan bersama guild-mu.</p>
+          <h3>Mining Pools</h3>
+          <p>Join a pool or start one with friends. Split the rewards, plan your strategy, and dominate the network with your guild.</p>
         </article>
       </div>
     </section>
@@ -150,24 +154,24 @@
       <h2 class="section-title"><span>02</span> Roadmap</h2>
       <ol class="roadmap">
         <li class="done">
-          <span class="rm-phase">Fase 0</span>
+          <span class="rm-phase">Phase 0</span>
           <h3>Genesis Block</h3>
-          <p>Prototype engine simulasi &amp; desain ekonomi in-game.</p>
+          <p>Simulation engine prototype &amp; in-game economy design.</p>
         </li>
         <li class="active">
-          <span class="rm-phase">Fase 1</span>
-          <h3>Waitlist Terbuka</h3>
-          <p>Kumpulkan miner awal. Pendaftar dapat bonus starter GPU.</p>
+          <span class="rm-phase">Phase 1</span>
+          <h3>Waitlist Open</h3>
+          <p>Gathering early miners. Everyone who signs up gets a bonus starter GPU.</p>
         </li>
         <li>
-          <span class="rm-phase">Fase 2</span>
+          <span class="rm-phase">Phase 2</span>
           <h3>Closed Beta</h3>
-          <p>Akses awal untuk antrian teratas waitlist. Uji rig &amp; pool.</p>
+          <p>Early access for the top of the waitlist. Stress-test rigs &amp; pools.</p>
         </li>
         <li>
-          <span class="rm-phase">Fase 3</span>
+          <span class="rm-phase">Phase 3</span>
           <h3>Mainnet Launch</h3>
-          <p>Rilis publik, leaderboard global, dan season pertama.</p>
+          <p>Public release, global leaderboards, and Season 1.</p>
         </li>
       </ol>
     </section>
@@ -177,27 +181,30 @@
       <h2 class="section-title"><span>03</span> FAQ</h2>
       <div class="faq">
         <details>
-          <summary>Apakah VOZZ menambang crypto sungguhan?</summary>
-          <p>Tidak. VOZZ adalah game simulasi. Semua mining terjadi di dalam game dan tidak memakai daya GPU perangkatmu untuk menambang crypto nyata.</p>
+          <summary>Does VOZZ mine real crypto?</summary>
+          <p>No. VOZZ is a simulation game. All mining happens inside the game and never uses your device's GPU to mine real cryptocurrency.</p>
         </details>
         <details>
-          <summary>Apa keuntungan gabung waitlist?</summary>
-          <p>Kamu dapat akses closed beta lebih awal, starter GPU eksklusif, dan bonus 500 VZ (mata uang in-game) saat game rilis.</p>
+          <summary>What do I get for joining the waitlist?</summary>
+          <p>Early access to the closed beta, an exclusive starter GPU, and a 500 VZ (in-game currency) bonus at launch.</p>
         </details>
         <details>
-          <summary>Game ini tersedia di platform apa?</summary>
-          <p>VOZZ akan rilis pertama di browser (desktop &amp; mobile), lalu menyusul versi aplikasi.</p>
+          <summary>Which platforms will VOZZ be on?</summary>
+          <p>VOZZ launches first in the browser (desktop &amp; mobile), with native apps to follow.</p>
         </details>
         <details>
-          <summary>Apakah gratis?</summary>
-          <p>Ya, VOZZ gratis dimainkan. Item kosmetik opsional akan tersedia, tapi tidak ada pay-to-win.</p>
+          <summary>Is it free to play?</summary>
+          <p>Yes, VOZZ is free to play. Optional cosmetics will be available, but there is no pay-to-win.</p>
         </details>
       </div>
     </section>
   </main>
 
   <footer class="footer">
-    <span>&copy; <span id="year"></span> VOZZ. Semua mining di game ini adalah simulasi.</span>
+    <span class="footer-brand">
+      <img src="assets/logo-mark.svg" alt="" width="22" height="22" />
+      &copy; <span id="year"></span> VOZZ. All mining in this game is simulated.
+    </span>
     <span class="footer-hash" id="footer-hash">0x0000000000000000</span>
   </footer>
 

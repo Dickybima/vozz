@@ -75,31 +75,16 @@ body {
 .logo {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-family: var(--font-display);
-  font-weight: 900;
-  font-size: 1.35rem;
-  letter-spacing: 0.18em;
-  color: var(--text);
   text-decoration: none;
 }
-
-.logo-chip {
-  width: 22px;
-  height: 22px;
-  border: 2px solid var(--green);
-  border-radius: 4px;
-  position: relative;
-  box-shadow: 0 0 12px var(--green), inset 0 0 6px var(--green);
-  animation: chipPulse 2.4s ease-in-out infinite;
+.logo img {
+  height: 40px;
+  width: auto;
+  display: block;
+  filter: drop-shadow(0 0 10px rgba(0, 255, 170, 0.35));
+  transition: filter 0.25s;
 }
-.logo-chip::after {
-  content: "";
-  position: absolute;
-  inset: 4px;
-  background: var(--green);
-  border-radius: 1px;
-}
+.logo:hover img { filter: drop-shadow(0 0 18px rgba(0, 255, 170, 0.7)); }
 
 @keyframes chipPulse {
   50% { box-shadow: 0 0 22px var(--green), inset 0 0 10px var(--green); }
@@ -175,6 +160,24 @@ body {
   padding: 60px clamp(16px, 5vw, 64px) 80px;
   max-width: 980px;
   margin: 0 auto;
+}
+
+.hero-mark {
+  margin-bottom: 22px;
+  animation: float 5s ease-in-out infinite;
+}
+.hero-mark img {
+  display: block;
+  width: clamp(84px, 12vw, 112px);
+  height: auto;
+  animation: markGlow 2.6s ease-in-out infinite;
+}
+@keyframes float {
+  50% { transform: translateY(-8px); }
+}
+@keyframes markGlow {
+  0%, 100% { filter: drop-shadow(0 0 14px rgba(0, 255, 170, 0.45)); }
+  50% { filter: drop-shadow(0 0 30px rgba(0, 212, 255, 0.8)); }
 }
 
 .status-pill {
@@ -552,6 +555,11 @@ body {
   font-size: 0.82rem;
   background: rgba(5, 7, 13, 0.7);
 }
+.footer-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
 .footer-hash { font-family: var(--font-mono); color: #3d5a4f; }
 
 /* ---------- Toast ---------- */
@@ -584,6 +592,7 @@ body {
 
 @media (max-width: 560px) {
   .nav-links a:not(.btn) { display: none; }
+  .logo img { height: 34px; }
   .waitlist-form { flex-direction: column; }
   .input-wrap { padding: 4px 10px; }
   .btn-primary { width: 100%; }

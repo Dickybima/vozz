@@ -59,7 +59,7 @@
   const footerHash = $("footer-hash");
 
   function renderWaitlist() {
-    statWait.textContent = waitlistCount.toLocaleString("id-ID");
+    statWait.textContent = waitlistCount.toLocaleString("en-US");
   }
 
   setInterval(() => {
@@ -67,7 +67,7 @@
   }, 250);
 
   window.addEventListener("block-found", () => {
-    statBlocks.textContent = window.miningSim.blocks.toLocaleString("id-ID");
+    statBlocks.textContent = window.miningSim.blocks.toLocaleString("en-US");
     footerHash.textContent = window.miningSim.lastHash;
     bump(statBlocks);
   });
@@ -96,12 +96,12 @@
 
   function showTicket(entry) {
     $("ticket-id").textContent = "#" + entry.id;
-    $("ticket-pos").textContent = "#" + entry.position.toLocaleString("id-ID");
+    $("ticket-pos").textContent = "#" + entry.position.toLocaleString("en-US");
     $("ticket-gpu").textContent = entry.gpu;
     ticket.hidden = false;
     form.hidden = true;
     msg.className = "form-msg success";
-    msg.textContent = `✓ ${entry.email} terdaftar. Sampai jumpa di closed beta, miner!`;
+    msg.textContent = `✓ ${entry.email} is on the list. See you in the closed beta, miner!`;
   }
 
   function referralLink(entry) {
@@ -120,7 +120,7 @@
       void form.offsetWidth;
       form.classList.add("invalid");
       msg.className = "form-msg error";
-      msg.textContent = "✗ Format email tidak valid.";
+      msg.textContent = "✗ Please enter a valid email address.";
       emailInput.focus();
       return;
     }
@@ -128,7 +128,7 @@
     submitBtn.disabled = true;
     submitBtn.classList.add("loading");
     msg.className = "form-msg";
-    msg.textContent = "> menghubungkan ke node... verifikasi hash...";
+    msg.textContent = "> connecting to node... verifying hash...";
 
     const ref = new URLSearchParams(window.location.search).get("ref") || null;
 
@@ -158,10 +158,10 @@
       };
       storage.set(entry);
       showTicket(entry);
-      toast("⛏  Slot diamankan! +500 VZ");
+      toast("⛏  Spot secured! +500 VZ");
     } catch (err) {
       msg.className = "form-msg error";
-      msg.textContent = "✗ Gagal terhubung. Coba lagi sebentar lagi.";
+      msg.textContent = "✗ Connection failed. Please try again in a moment.";
     } finally {
       submitBtn.disabled = false;
       submitBtn.classList.remove("loading");
@@ -174,7 +174,7 @@
     const link = referralLink(entry);
     try {
       await navigator.clipboard.writeText(link);
-      toast("Link referral disalin!");
+      toast("Referral link copied!");
     } catch {
       toast(link);
     }
