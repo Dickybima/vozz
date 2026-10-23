@@ -5,9 +5,8 @@
  * under control, and earn VOZZ from a simulated network that finds a block about every
  * 10 seconds. Mine in a pool (steady share of every block) or solo (win whole blocks).
  *
- * Mining is gated: the player connects a wallet (wallet.js) and must hold a VOZZ Mining
- * Pass NFT on Robinhood Chain (contracts/). The game itself still runs client-side;
- * progress is saved per wallet in localStorage and VOZZ rewards are not on-chain yet.
+ * Everything runs client-side; progress is saved to localStorage. Nothing here touches
+ * Robinhood Chain yet — the chain lane is a simulation of how mining will look.
  */
 (() => {
   /* ---------- Config ---------- */
@@ -91,8 +90,6 @@
   const chain = []; // recent blocks for the lane
   const hist = [];
   let now = 0; // seconds since page load (sim clock)
-  let account = null; // connected wallet that passed the Mining Pass check
-  let unlocked = false; // simulation runs only while unlocked
 
   function newState() {
     const wl = readWaitlist();
@@ -123,23 +120,15 @@
     try { return JSON.parse(localStorage.getItem(WAITLIST_KEY)) || null; } catch { return null; }
   }
 
-  const saveKey = () => SAVE_KEY + ":" + account.toLowerCase();
-
   function load() {
     try {
-      let raw = JSON.parse(localStorage.getItem(saveKey()));
-      // One-time move of a save from before wallets were required.
-      if (!raw) {
-        raw = JSON.parse(localStorage.getItem(SAVE_KEY));
-        if (raw) localStorage.removeItem(SAVE_KEY);
-      }
+      const raw = JSON.parse(localStorage.getItem(SAVE_KEY));
       if (raw && raw.v === 1) return Object.assign(newState(), raw);
     } catch { /* ignore */ }
     return null;
   }
 
   function save() {
-    if (!unlocked || !account) return;
     S.lastSave = Date.now();
     S.lastRate = S.pool === "solo" ? live.income * 0.8 : live.income;
     try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch { /* private mode */ }
@@ -335,7 +324,7 @@
       else if (r.throttled) { c.badge.hidden = false; c.badge.className = "gpu-badge hot"; c.badge.textContent = "⚠ THROTTLING"; }
       else c.badge.hidden = true;
 
-      c.hash.textContent = (r.hash || 0).toFixed(1) + " MH/s";
+      c.hash.textContent = r.hash.toFixed(1) + " MH/s";
       c.hash.className = "g-hash " + (r.throttled || crashed ? "c-red" : "c-green");
       const t = Math.round(r.temp);
       c.temp.textContent = t + "°C";
@@ -349,7 +338,7 @@
       c.card.style.setProperty("--play", active ? "running" : "paused");
 
       // brief glow when the card "submits a share"
-      if (active && Math.random() < (r.hash || 0) / 2000) {
+      if (active && Math.random() < r.hash / 2000) {
         c.card.classList.add("share");
         setTimeout(() => c.card.classList.remove("share"), 280);
       }
@@ -530,7 +519,7 @@
     standings().forEach((r, i) => {
       const li = el("li", r.me ? "me" : "");
       li.append(el("span", "", "#" + (i + 1)), el("span", "", ""), el("span", "", fmtVZ(r.total) + " VOZZ"));
-      li.children[1].textContent = r.me ? "You" + (account ? " (" + short(account) + ")" : "") : r.name;
+      li.children[1].textContent = r.me ? "You" + (S.wallet ? " (" + short(S.wallet) + ")" : "") : r.name;
       list.append(li);
     });
   }
@@ -553,195 +542,18 @@
     $("v-bill").textContent = "-" + live.bill.toFixed(3) + "/s";
   }
 
-  /* ---------- Wallet + Mining Pass gate ---------- */
-  const W = window.VozzWallet;
-  const menu = $("wallet-menu");
-
   function renderWallet() {
-    const st = W.state;
+    const wl = readWaitlist();
+    S.wallet = wl && wl.wallet;
     const chip = $("wallet-chip");
-    chip.classList.toggle("unlinked", !st.address);
-    chip.innerHTML = "";
-    chip.append(st.address ? "◆ " + short(st.address) : "Connect wallet");
-    if (st.address && unlocked) chip.append(el("span", "pass-ok", "PASS ✓"));
-    chip.title = st.address ? `${st.info ? st.info.name : "Wallet"} on ${W.network.name}` : "Connect a wallet to start mining";
-    if (st.address) $("wallet-explorer").href = W.explorerAddress(st.address);
+    chip.classList.toggle("unlinked", !S.wallet);
+    chip.textContent = S.wallet ? "◆ " + short(S.wallet) : "Link wallet";
+    chip.title = S.wallet ? "Robinhood Chain address from your waitlist signup" : "Join the waitlist to link your Robinhood Chain address";
   }
-
-  function toggleMenu(open) {
-    menu.hidden = !open;
-    $("wallet-chip").setAttribute("aria-expanded", String(open));
-  }
-  $("wallet-chip").addEventListener("click", (e) => {
-    e.stopPropagation();
-    if (!W.state.address) W.pick();
-    else toggleMenu(menu.hidden);
+  $("wallet-chip").addEventListener("click", () => {
+    if (S.wallet) toast("Linked Robinhood Chain address from your waitlist signup");
+    else window.location.href = "../#join";
   });
-  document.addEventListener("click", () => toggleMenu(false));
-  menu.addEventListener("click", async (e) => {
-    const act = e.target.dataset && e.target.dataset.act;
-    toggleMenu(false);
-    if (act === "copy") {
-      try { await navigator.clipboard.writeText(W.state.address); toast("Address copied"); } catch { toast(W.state.address); }
-    } else if (act === "switch") {
-      W.disconnect();
-      W.pick();
-    } else if (act === "disconnect") {
-      W.disconnect();
-    }
-  });
-
-  const gate = {
-    el: $("gate"),
-    action: $("gate-action"),
-    msg: $("gate-msg"),
-    stage: null,
-  };
-  $("gate-price").textContent = W.priceEth;
-  $("gate-net").textContent = W.network.name;
-  document.querySelectorAll(".gs-net").forEach((n) => (n.textContent = W.network.name));
-
-  function gateMsg(text, cls = "") {
-    gate.msg.className = "gate-msg" + (cls ? " " + cls : "");
-    gate.msg.innerHTML = text;
-  }
-
-  // stage: connect | chain | checking | soon | mint | error
-  function lock(stage, message) {
-    if (unlocked) {
-      save();
-      unlocked = false;
-      log("Rig paused — Mining Pass not detected for this wallet", "c-amber");
-    }
-    gate.stage = stage;
-    gate.el.hidden = false;
-    $("welcome").hidden = true;
-    const st = W.state;
-    const steps = { connect: !!st.address, chain: !!st.address && st.chainOk, pass: false };
-    const current = !steps.connect ? "connect" : !steps.chain ? "chain" : "pass";
-    document.querySelectorAll(".gate-steps li").forEach((li) => {
-      li.classList.toggle("done", steps[li.dataset.step]);
-      li.classList.toggle("current", li.dataset.step === current);
-    });
-    $("gs-connect").textContent = st.address ? short(st.address) : "";
-    $("gate-switch").hidden = !st.address;
-
-    const labels = {
-      connect: ["Connect wallet", false],
-      chain: [`Switch to ${W.network.name}`, false],
-      checking: ["Checking your Mining Pass…", true],
-      soon: ["Mint opens soon", true],
-      mint: [`Mint Mining Pass · ${W.priceEth} ETH`, false],
-      error: ["Try again", false],
-    };
-    const [label, disabled] = labels[stage];
-    gate.action.textContent = label;
-    gate.action.disabled = disabled;
-    if (stage === "soon") gateMsg("The Mining Pass contract isn't deployed yet — check back soon.");
-    else if (message !== undefined) gateMsg(message, stage === "error" ? "err" : "");
-    else if (stage !== "mint") gateMsg("");
-    renderWallet();
-  }
-
-  function unlock(addr) {
-    if (unlocked && account === addr) return;
-    account = addr;
-    S = load() || newState();
-    for (const k in R) delete R[k];
-    for (const g of S.gpus) R[g.id] = { temp: AMBIENT + 10, crashUntil: 0, flash: 0 };
-    chain.length = 0;
-    hist.length = 0;
-    $("log").innerHTML = "";
-    syncOc();
-    buildRig();
-    $("mode-label").textContent = pool().name;
-    unlocked = true;
-    step(0.01);
-    refreshLists(true);
-    updateTop();
-    renderBoard();
-    gate.el.hidden = true;
-    log(`Mining Pass verified for ${short(addr)} · ${W.network.name}`, "c-green");
-    const away = (Date.now() - S.lastSave) / 1000;
-    if (S.seenWelcome && away > 30) offlineEarnings(away);
-    if (!S.seenWelcome) showWelcome();
-    else toast("⛏ Mining Pass verified — rig online");
-    last = performance.now();
-    save();
-    renderWallet();
-  }
-
-  let checkSeq = 0;
-  async function evaluate() {
-    const st = W.state;
-    const seq = ++checkSeq;
-    if (!st.address) return lock("connect");
-    if (unlocked && account && st.address.toLowerCase() !== account.toLowerCase()) lock("checking");
-    if (!st.chainOk) return lock("chain");
-    if (!W.passConfigured()) return lock("soon");
-    if (!(unlocked && account === st.address)) lock("checking");
-    let has;
-    try {
-      has = await W.hasPass(st.address);
-    } catch (err) {
-      if (seq === checkSeq) lock("error", "Couldn't read the Mining Pass contract. Check your connection.");
-      return;
-    }
-    if (seq !== checkSeq) return; // a newer check started (account/chain changed)
-    if (has) return unlock(st.address);
-    lock("mint");
-    updateSupply();
-  }
-
-  async function updateSupply() {
-    try {
-      const s = await W.passStats();
-      if (!s) return;
-      $("gs-supply").textContent = `${s.minted.toLocaleString("en-US")} minted`;
-      if (!s.mintOpen && gate.stage === "mint") {
-        gate.action.disabled = true;
-        gateMsg("Minting is paused right now.", "err");
-      }
-    } catch { /* ignore */ }
-  }
-
-  async function mint() {
-    gate.action.disabled = true;
-    const stages = {
-      checking: "Checking your ETH balance…",
-      confirm: "Confirm the transaction in your wallet…",
-    };
-    try {
-      await W.mintPass((stage, hash) => {
-        if (stages[stage]) gateMsg(stages[stage]);
-        if (stage === "pending") gateMsg(`Minting… <a href="${W.explorerTx(hash)}" target="_blank" rel="noopener">view transaction</a>`);
-        if (stage === "done") gateMsg("Mining Pass minted! ✓", "ok");
-      });
-      toast("★ Mining Pass minted!", true);
-      await evaluate();
-    } catch (err) {
-      gateMsg("✗ " + ((err && err.message) || "Mint failed."), "err");
-      gate.action.disabled = false;
-    }
-  }
-
-  gate.action.addEventListener("click", async () => {
-    const stage = gate.stage;
-    if (stage === "connect") {
-      await W.pick();
-    } else if (stage === "chain") {
-      try { await W.ensureChain(); } catch (err) { gateMsg("✗ " + ((err && err.message) || "Couldn't switch network."), "err"); }
-    } else if (stage === "mint") {
-      await mint();
-    } else if (stage === "error") {
-      evaluate();
-    }
-  });
-  $("gate-switch").addEventListener("click", () => {
-    W.disconnect();
-    W.pick();
-  });
-  W.onChange(() => evaluate());
 
   /* ---------- Canvases ---------- */
   function fitCanvas(c) {
@@ -857,7 +669,7 @@
     last = t;
     while (dt > 0) {
       const d = Math.min(0.1, dt);
-      if (unlocked) step(d);
+      step(d);
       dt -= d;
       uiT += d; histT += d; saveT += d; boardT += d;
     }
@@ -873,8 +685,6 @@
   // Catch up when the tab was in the background (rAF pauses there).
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) { save(); return; }
-    last = performance.now();
-    if (!unlocked) return;
     const away = (Date.now() - S.lastSave) / 1000;
     if (away > 30) offlineEarnings(away);
     last = performance.now();
@@ -904,26 +714,37 @@
     S.seenWelcome = true;
     save();
   });
-  $("help-btn").addEventListener("click", () => unlocked && showWelcome());
+  $("help-btn").addEventListener("click", showWelcome);
   $("reset-btn").addEventListener("click", () => {
     if (!confirm("Reset all beta progress? This can't be undone.")) return;
-    try { localStorage.removeItem(saveKey()); } catch { /* ignore */ }
+    try { localStorage.removeItem(SAVE_KEY); } catch { /* ignore */ }
     window.removeEventListener("beforeunload", save);
     location.reload();
   });
   window.addEventListener("resize", () => { drawChart(); drawChain(); });
 
   /* ---------- Init ---------- */
-  // Show a preview rig behind the gate until a wallet with a Mining Pass connects.
-  S = newState();
-  for (const g of S.gpus) R[g.id] = { temp: AMBIENT, crashUntil: 0, flash: 0 };
+  const saved = load();
+  S = saved || newState();
+  for (const g of S.gpus) R[g.id] = { temp: AMBIENT + 10, crashUntil: 0, flash: 0 };
+  renderWallet();
   syncOc();
   buildRig();
   $("mode-label").textContent = pool().name;
+  step(0.01);
   refreshLists(true);
   updateTop();
   renderBoard();
-  lock("connect");
-  W.restore().then(evaluate);
+
+  if (saved) {
+    log("Rig back online", "muted");
+    const away = (Date.now() - S.lastSave) / 1000;
+    if (away > 30) offlineEarnings(away);
+  } else {
+    log(`Rig online with a starter ${S.starter}`, "muted");
+    if (S.wallet) log(`Linked wallet ${short(S.wallet)} · Robinhood Chain`, "c-green");
+  }
+  if (!S.seenWelcome) showWelcome();
+  save();
   requestAnimationFrame(frame);
 })();

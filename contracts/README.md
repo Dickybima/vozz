@@ -1,6 +1,8 @@
 # VOZZ Mining Pass contract
 
-`src/VozzMiningPass.sol` is the ERC-721 NFT that unlocks mining in the game (`play/`).
+`src/VozzMiningPass.sol` is an ERC-721 NFT intended to unlock mining in the game (`play/`).
+
+> **Status: on hold.** The game is free to play right now and doesn't check for this pass, and the contract hasn't been deployed. To turn it back on, deploy it and restore the game's pass gate (git commit `95c77ae`).
 
 - **Price:** exactly 0.001 ETH (`PRICE`). Each mint forwards the payment immediately, in the same transaction, to the **payout address**. The default is the VOZZ treasury `0xC7AdA4182aA21A8840Dc0bC732a36B2D32A2dDA1`.
 - **One per wallet:** `mint()` reverts with `AlreadyHasPass` if the caller already holds one

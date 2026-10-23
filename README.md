@@ -20,8 +20,8 @@ Waitlist landing page for VOZZ, a GPU-themed mining simulation game built on **R
 - `assets/how-to-join.mp4` (+ poster) — 56s "How to join the VOZZ waitlist" tutorial recorded from the real site. Re-record it with `node video/record-join.js` after changing the waitlist flow.
 - `play/` — the playable beta game (`index.html`, `game.css`, `game.js`)
 - `config.js` — network settings (Robinhood Chain mainnet/testnet) and the Mining Pass contract address
-- `wallet.js` — wallet picker (EIP-6963: MetaMask, Rabby, Coinbase, OKX, … plus open-in-app links on mobile), network switching and Mining Pass mint/check
-- `contracts/` — the VOZZ Mining Pass NFT contract, tests and deploy script (see `contracts/README.md`)
+- `wallet.js` — wallet picker (EIP-6963: MetaMask, Rabby, Coinbase, OKX, … plus open-in-app links on mobile), network switching (used by the waitlist's Connect wallet button; the Mining Pass helpers are unused for now)
+- `contracts/` — a VOZZ Mining Pass NFT contract (0.001 ETH mint), with tests and a deploy script. It is **not used yet**: the game doesn't require it and it isn't deployed. See `contracts/README.md`.
 
 ## Playable beta (`play/`)
 
@@ -34,9 +34,7 @@ Waitlist landing page for VOZZ, a GPU-themed mining simulation game built on **R
 - **Missions** with VOZZ rewards, a leaderboard against simulated miners, an event log and a Robinhood Chain block lane (simulated).
 - Progress autosaves to `localStorage`; offline earnings are credited at 50% for up to 2 hours. A wallet linked through the waitlist shows in the top bar.
 
-**Mining Pass required.** Before the rig starts, the player connects a wallet (picker with every detected wallet) on Robinhood Chain and must hold a **VOZZ Mining Pass** NFT, minted in-game for **0.001 ETH** (one per wallet). The payment goes straight to `0xC7AdA4182aA21A8840Dc0bC732a36B2D32A2dDA1`. Progress is saved per wallet. Until the contract is deployed and its address is in `config.js`, the game shows "Mint opens soon" and stays locked. See `contracts/README.md` to deploy.
-
-The mining itself and VOZZ balances are still simulated in the browser; only the Mining Pass is on-chain. Balancing constants are at the top of `play/game.js`.
+The beta is free to play: no wallet or NFT is needed. Nothing in the beta is on-chain yet. Balancing constants are at the top of `play/game.js`.
 
 ## Running
 

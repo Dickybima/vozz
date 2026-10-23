@@ -29,15 +29,7 @@
     </div>
 
     <a href="https://x.com/vozzGPU" class="x-link" target="_blank" rel="noopener" aria-label="VOZZ on X (@vozzGPU)" title="Follow @vozzGPU on X"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
-    <div class="wallet-wrap">
-      <button class="wallet-chip" id="wallet-chip" type="button" aria-haspopup="menu" aria-expanded="false"></button>
-      <div class="wallet-menu" id="wallet-menu" role="menu" hidden>
-        <button type="button" role="menuitem" data-act="copy">Copy address</button>
-        <a role="menuitem" id="wallet-explorer" target="_blank" rel="noopener">View on explorer</a>
-        <button type="button" role="menuitem" data-act="switch">Use another wallet</button>
-        <button type="button" role="menuitem" data-act="disconnect" class="danger">Disconnect</button>
-      </div>
-    </div>
+    <button class="wallet-chip" id="wallet-chip" type="button"></button>
   </header>
 
   <main class="layout">
@@ -135,38 +127,12 @@
   </main>
 
   <footer class="foot">
-    <span>Closed beta preview. Mining needs a Mining Pass NFT; progress is saved per wallet in this browser. Mining itself is simulated and VOZZ rewards are not on-chain yet.</span>
+    <span>Closed beta preview. Progress is saved in this browser only; mining is simulated and rewards are not on-chain yet.</span>
     <span class="foot-actions">
       <button type="button" class="link-btn" id="help-btn">How to play</button>
       <button type="button" class="link-btn danger" id="reset-btn">Reset progress</button>
     </span>
   </footer>
-
-  <!-- Mining Pass gate: shown until the connected wallet holds a pass -->
-  <div class="overlay gate" id="gate">
-    <div class="dialog gate-dialog" role="dialog" aria-modal="true" aria-labelledby="gate-title">
-      <img class="pass-art" src="../assets/mining-pass.svg" alt="VOZZ Mining Pass NFT" width="132" height="132" />
-      <h2 id="gate-title">Mining Pass required</h2>
-      <p class="dialog-sub">Mining unlocks once your wallet holds a VOZZ Mining Pass NFT on <span id="gate-net">Robinhood Chain</span>.</p>
-      <ol class="gate-steps">
-        <li data-step="connect"><span class="gs-ico"></span><span>Connect your wallet</span><small id="gs-connect"></small></li>
-        <li data-step="chain"><span class="gs-ico"></span><span>Switch to <span class="gs-net">Robinhood Chain</span></span></li>
-        <li data-step="pass"><span class="gs-ico"></span><span>Own a Mining Pass</span><small id="gs-supply"></small></li>
-      </ol>
-      <div class="pass-price">
-        <span>Mint price</span>
-        <strong><span id="gate-price">0.001</span> ETH</strong>
-        <small>+ gas · one per wallet</small>
-      </div>
-      <button type="button" class="btn-primary" id="gate-action">Connect wallet</button>
-      <p class="gate-msg" id="gate-msg" role="status" aria-live="polite"></p>
-      <p class="gate-note">
-        The pass is an access key for the game, not an investment.
-        <button type="button" class="link-btn" id="gate-switch" hidden>Use another wallet</button>
-        <a href="../" class="link-btn">Back to site</a>
-      </p>
-    </div>
-  </div>
 
   <!-- Welcome / how to play -->
   <div class="overlay" id="welcome" hidden>
@@ -186,8 +152,6 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-  <script src="../config.js"></script>
-  <script src="../wallet.js"></script>
   <script src="game.js"></script>
 </body>
 </html>
