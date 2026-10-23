@@ -17,6 +17,7 @@ Waitlist landing page for VOZZ, a GPU-themed mining simulation game built on **R
 - `assets/beta-mining.mp4` / `.webm` + `beta-mining-poster.jpg` — 38s "Beta Mining Gameplay" video, opened from the **Beta Gameplay** item in the top menu
 - `video/beta-demo.html` — source of that video (a scripted canvas mock of the beta UI; open it in a browser to preview in real time)
 - `video/render.js` — renders the video frame by frame and encodes it
+- `assets/how-to-join.mp4` (+ poster) — 56s "How to join the VOZZ waitlist" tutorial recorded from the real site. Re-record it with `node video/record-join.js` after changing the waitlist flow.
 - `play/` — the playable beta game (`index.html`, `game.css`, `game.js`)
 - `config.js` — network settings (Robinhood Chain mainnet/testnet) and the Mining Pass contract address
 - `wallet.js` — wallet picker (EIP-6963: MetaMask, Rabby, Coinbase, OKX, … plus open-in-app links on mobile), network switching and Mining Pass mint/check
