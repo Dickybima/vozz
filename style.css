@@ -104,6 +104,19 @@ body {
 }
 .nav-links a:not(.btn):hover { color: var(--green); }
 
+.nav-x {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+.nav-x svg { width: 16px; height: 16px; fill: var(--text); }
+.nav-x:hover { border-color: var(--green); background: rgba(0, 255, 170, 0.08); box-shadow: 0 0 16px rgba(0, 255, 170, 0.3); }
+
 .nav-video {
   display: inline-flex;
   align-items: center;
@@ -982,7 +995,7 @@ code {
 }
 
 @media (max-width: 560px) {
-  .nav-links a:not(.btn):not(.nav-video) { display: none; }
+  .nav-links a:not(.btn):not(.nav-video):not(.nav-x) { display: none; }
   .video-actions .btn { flex: 1; }
   .nav-video-long { display: none; }
   .nav-links { gap: 12px; }
@@ -1006,5 +1019,8 @@ code {
 
 @media (max-width: 400px) {
   .nav .btn-small { white-space: nowrap; padding: 9px 11px; }
+  .nav-links { gap: 8px; }
+  .nav-video > span:last-child { display: none; }
+  .nav-x { width: 32px; height: 32px; }
   .logo img { height: 30px; }
 }

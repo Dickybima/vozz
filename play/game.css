@@ -489,6 +489,18 @@ input[type="range"]::-moz-range-thumb {
   box-shadow: 0 0 30px rgba(0, 255, 170, 0.35);
 }
 
+.x-link {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  flex: none;
+}
+.x-link svg { width: 15px; height: 15px; fill: var(--text); }
+.x-link:hover { border-color: var(--green); }
+
 /* ---------- Wallet menu ---------- */
 .wallet-wrap { position: relative; }
 .wallet-chip .pass-ok { color: var(--lime); margin-left: 6px; }
