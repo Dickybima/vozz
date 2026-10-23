@@ -16,6 +16,20 @@ Waitlist landing page for VOZZ, a GPU-themed mining simulation game built on **R
 - `assets/beta-mining.mp4` / `.webm` + `beta-mining-poster.jpg` — 38s "Beta Mining Gameplay" video, opened from the **Beta Gameplay** item in the top menu
 - `video/beta-demo.html` — source of that video (a scripted canvas mock of the beta UI; open it in a browser to preview in real time)
 - `video/render.js` — renders the video frame by frame and encodes it
+- `play/` — the playable beta game (`index.html`, `game.css`, `game.js`)
+
+## Playable beta (`play/`)
+
+`play/index.html` is a playable closed-beta prototype, linked from **Play Beta** in the nav and the hero. It's an idle GPU-mining game:
+
+- **Rig:** buy GPUs (6 models) into slots; sell for 50% back. Each card shows live hashrate, temperature, wattage and spinning fans.
+- **Overclock:** core / memory / power limit / fan sliders trade hashrate against heat and power bill. Cards throttle at 88°C and crash for 8s at 100°C.
+- **Upgrades:** rig slots (4 → 12), PSU wattage (cards beyond PSU capacity get no power), cooling.
+- **Mining:** the simulated network finds a block about every 10s (50 VZ reward). Pool mining (NEON-FORGE steady, HashLords variable) pays your share of every block; solo mining wins whole blocks by chance. Network hashrate and difficulty grow over time.
+- **Missions** with VZ rewards, a leaderboard against simulated miners, an event log and a Robinhood Chain block lane (simulated).
+- Progress autosaves to `localStorage`; offline earnings are credited at 50% for up to 2 hours. A wallet linked through the waitlist shows in the top bar.
+
+Nothing in the beta is on-chain yet. Balancing constants are at the top of `play/game.js`.
 
 ## Running
 

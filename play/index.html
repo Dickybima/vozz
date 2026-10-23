@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VOZZ Beta — Play the GPU Mining Game</title>
+  <meta name="description" content="Play the VOZZ closed beta: build a GPU rig, overclock it, manage temps, and mine blocks." />
+  <meta name="theme-color" content="#05070d" />
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="game.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../" title="Back to VOZZ home">
+      <img src="../assets/logo-mark.svg" alt="" width="34" height="34" />
+      <span class="brand-name">VOZZ</span>
+      <span class="tag tag-beta">BETA</span>
+    </a>
+    <span class="tag tag-chain" title="VOZZ is built on Robinhood Chain. Beta progress is off-chain."><span class="dot"></span>Robinhood Chain · beta</span>
+
+    <div class="top-stats">
+      <div class="top-stat"><small>Hashrate</small><strong id="t-hash" class="c-green">0 MH/s</strong></div>
+      <div class="top-stat"><small>Net / sec</small><strong id="t-rate">0.000</strong></div>
+      <div class="top-stat"><small>Block</small><strong id="t-height">#0</strong></div>
+      <div class="top-stat"><small>Balance</small><strong id="t-bal" class="c-amber">0.00 VZ</strong></div>
+    </div>
+
+    <button class="wallet-chip" id="wallet-chip" type="button"></button>
+  </header>
+
+  <main class="layout">
+    <div class="col-left">
+    <!-- Rig -->
+    <section class="panel rig" aria-labelledby="rig-title">
+      <div class="panel-head">
+        <h2 id="rig-title">RIG #1 — <span id="rig-name">Basement Beast</span></h2>
+        <div class="rig-meta">
+          <span id="rig-count">0/4 GPUs</span>
+          <span class="psu" id="rig-power">0 / 650 W</span>
+        </div>
+      </div>
+      <div class="power-bar"><div class="power-fill" id="power-fill"></div></div>
+      <div class="gpu-grid" id="gpu-grid"></div>
+    </section>
+
+    <!-- Chain lane -->
+    <section class="panel chain-panel">
+      <div class="panel-head">
+        <h2>BLOCKS — ROBINHOOD CHAIN <span class="muted">(simulated)</span></h2>
+        <span class="mono muted" id="mode-label">Pool</span>
+      </div>
+      <canvas id="chain" height="120"></canvas>
+    </section>
+
+    </div>
+
+    <!-- Side: chart + tabs -->
+    <section class="side">
+      <div class="panel chart-panel">
+        <div class="panel-head">
+          <h2>HASHRATE — LIVE</h2>
+          <span class="c-green mono" id="chart-val">0 MH/s</span>
+        </div>
+        <canvas id="chart" height="120"></canvas>
+        <div class="net-row">
+          <span>Network <strong id="net-hash">0 GH/s</strong></span>
+          <span>Your share <strong id="net-share">0%</strong></span>
+          <span>Next block <strong id="net-next">0s</strong></span>
+        </div>
+      </div>
+
+      <div class="panel tabs-panel">
+        <div class="tabs" role="tablist">
+          <button role="tab" class="tab active" data-tab="shop">Shop</button>
+          <button role="tab" class="tab" data-tab="tune">Overclock</button>
+          <button role="tab" class="tab" data-tab="upgrades">Upgrades</button>
+          <button role="tab" class="tab" data-tab="pool">Mining</button>
+          <button role="tab" class="tab" data-tab="missions">Missions <span class="badge" id="mission-badge" hidden></span></button>
+        </div>
+
+        <div class="tab-body" id="tab-shop"></div>
+
+        <div class="tab-body" id="tab-tune" hidden>
+          <div class="slider-row">
+            <label for="oc-core">Core clock <span id="v-core">+0 MHz</span></label>
+            <input type="range" id="oc-core" min="0" max="300" step="10" value="0" />
+          </div>
+          <div class="slider-row">
+            <label for="oc-mem">Memory clock <span id="v-mem">+0 MHz</span></label>
+            <input type="range" id="oc-mem" min="0" max="1500" step="50" value="0" />
+          </div>
+          <div class="slider-row amber">
+            <label for="oc-pl">Power limit <span id="v-pl">100%</span></label>
+            <input type="range" id="oc-pl" min="50" max="125" step="5" value="100" />
+          </div>
+          <div class="slider-row cyan">
+            <label for="oc-fan">Fan speed <span id="v-fan">60%</span></label>
+            <input type="range" id="oc-fan" min="30" max="100" step="5" value="60" />
+          </div>
+          <div class="tune-stats">
+            <div><small>Efficiency</small><strong id="v-eff">0 KH/W</strong></div>
+            <div><small>Hottest GPU</small><strong id="v-hot">0°C</strong></div>
+            <div><small>Power bill</small><strong id="v-bill">0.000/s</strong></div>
+          </div>
+          <p class="hint">Higher clocks = more hash, more heat and a bigger power bill. Above 88°C cards throttle; at 100°C they crash for a few seconds.</p>
+          <button class="btn-ghost" id="oc-reset" type="button">Reset to stock</button>
+        </div>
+
+        <div class="tab-body" id="tab-upgrades" hidden></div>
+        <div class="tab-body" id="tab-pool" hidden></div>
+        <div class="tab-body" id="tab-missions" hidden></div>
+      </div>
+      <!-- Log + leaderboard -->
+      <section class="panel log-panel">
+        <div class="log-tabs">
+          <button class="ltab active" data-ltab="log">Event log</button>
+          <button class="ltab" data-ltab="board">Leaderboard</button>
+        </div>
+        <ol class="log" id="log"></ol>
+        <ol class="board" id="board" hidden></ol>
+      </section>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span>Closed beta preview. Progress is saved in this browser only; mining is simulated and rewards are not on-chain yet.</span>
+    <span class="foot-actions">
+      <button type="button" class="link-btn" id="help-btn">How to play</button>
+      <button type="button" class="link-btn danger" id="reset-btn">Reset progress</button>
+    </span>
+  </footer>
+
+  <!-- Welcome / how to play -->
+  <div class="overlay" id="welcome" hidden>
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="welcome-title">
+      <img src="../assets/logo-mark.svg" alt="" width="64" height="64" class="dialog-mark" />
+      <h2 id="welcome-title">Welcome to the VOZZ Beta</h2>
+      <p class="dialog-sub" id="welcome-sub">Your rig is online with one starter GPU and 10 VZ.</p>
+      <ol class="howto">
+        <li><strong>Buy GPUs</strong> in the Shop to raise your hashrate. Watch your PSU wattage.</li>
+        <li><strong>Overclock</strong> for more hash, but keep temps under 88°C or cards throttle.</li>
+        <li><strong>Mine</strong> in a pool for steady payouts, or go solo to win whole blocks.</li>
+        <li><strong>Upgrade</strong> slots, PSU and cooling, and complete missions for bonus VZ.</li>
+      </ol>
+      <button type="button" class="btn-primary" id="welcome-go">Start mining</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="game.js"></script>
+</body>
+</html>
