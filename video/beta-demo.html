@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>VOZZ Beta Mining — video source</title>
+<!--
+  Source for assets/beta-mining.mp4. A scripted, deterministic mock of the VOZZ beta
+  gameplay drawn on one canvas. `window.renderAt(t)` steps the simulation to time t
+  (seconds) and draws that frame; video/render.js captures frames and encodes them.
+  Open this file directly in a browser to preview it in real time.
+-->
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; background: #05070d; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1280" height="720"></canvas>
+<script>
+(() => {
+  const W = 1280, H = 720;
+  const DURATION = 38;
+  const canvas = document.getElementById("c");
+  const ctx = canvas.getContext("2d");
+
+  const C = {
+    bg: "#05070d", panel: "#0b1220", panel2: "#0e1728", line: "rgba(255,255,255,0.07)",
+    text: "#e6f1ff", muted: "#8a9bb4", green: "#00ffaa", cyan: "#00d4ff",
+    magenta: "#ff2bd6", amber: "#ffb020", red: "#ff3b5c", violet: "#7a5cff",
+  };
+  const MONO = "'JetBrains Mono', monospace";
+  const DISPLAY = "Orbitron, sans-serif";
+  const BODY = "Inter, sans-serif";
+
+  /* ---------- helpers ---------- */
+  function mulberry32(a) {
+    return () => {
+      a |= 0; a = (a + 0x6d2b79f5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+  const easeOutBack = (t) => 1 + 2.2 * Math.pow(t - 1, 3) + 1.2 * Math.pow(t - 1, 2);
+  const seg = (t, a, b) => clamp((t - a) / (b - a));
+  const fmt = (n, d = 2) => n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+
+  function rr(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+  function panel(x, y, w, h, title, accent) {
+    ctx.fillStyle = "rgba(11,18,32,0.92)";
+    rr(x, y, w, h, 12); ctx.fill();
+    ctx.strokeStyle = accent ? "rgba(0,255,170,0.35)" : C.line;
+    ctx.lineWidth = 1; ctx.stroke();
+    if (title) {
+      ctx.font = `700 11px ${DISPLAY}`;
+      ctx.fillStyle = C.muted;
+      ctx.textBaseline = "alphabetic";
+      ctx.fillText(title, x + 16, y + 24);
+    }
+  }
+  function text(str, x, y, font, color, align = "left") {
+    ctx.font = font; ctx.fillStyle = color; ctx.textAlign = align;
+    ctx.fillText(str, x, y);
+    ctx.textAlign = "left";
+  }
+
+  /* ---------- simulation state ---------- */
+  const MODELS = ["VX 9070", "RZ 7900", "VX 8080 Ti", "VX 6090", "RZ 6800 XT", "VX 9070"];
+  const BASE = [118, 96, 104, 88, 82, 118];
+  const INSTALL_AT = [3.6, 4.4, 5.2, 6.0, 6.8, 7.6];
+  const SCENES = [
+    { at: 2.8, end: 10, n: "01", title: "BUILD YOUR RIG", sub: "Slot in GPUs, risers and PSUs" },
+    { at: 10, end: 18, n: "02", title: "OVERCLOCK & TUNE", sub: "Push the clocks. Watch the temps." },
+    { at: 18, end: 27, n: "03", title: "MINE BLOCKS", sub: "Every share counts toward the next block" },
+    { at: 27, end: 33.2, n: "04", title: "JOIN A POOL", sub: "Team up and climb the leaderboard" },
+  ];
+
+  let S;
+  function reset() {
+    const rnd = mulberry32(1337);
+    S = {
+      t: 0, rnd,
+      gpus: MODELS.map((m, i) => ({ model: m, base: BASE[i], fan: rnd() * 6, temp: 38, load: 0, hash: 0, flash: 0, shareT: rnd() })),
+      shares: [], chain: [], blockProg: 0, height: 812428, nonce: 0,
+      balance: 1240.5, hist: [], histT: 0, log: [], blockFlash: 0, pulses: [], poolJoined: false,
+      throttleToast: 0, total: 0,
+    };
+    for (let i = 0; i < 9; i++) S.chain.push({ h: S.height - 9 + i, hash: hex(rnd, 4) });
+    addLog("Rig 'Basement Beast' online", C.muted);
+  }
+  const hex = (rnd, n) => { let s = "0000"; for (let i = 0; i < n; i++) s += "0123456789abcdef"[(rnd() * 16) | 0]; return s; };
+  function addLog(msg, color) {
+    const ts = new Date(Date.UTC(2026, 11, 1, 21, 14, 0) + S.t * 1000).toISOString().slice(11, 19);
+    S.log.unshift({ ts, msg, color, born: S.t });
+    S.log.length = Math.min(S.log.length, 8);
+  }
+
+  // Overclock values as a function of time (driven by the fake cursor).
+  const oc = (t) => ({
+    core: Math.round(lerp(0, 150, ease(seg(t, 11.2, 12.8)))),
+    mem: Math.round(lerp(0, 900, ease(seg(t, 13.0, 14.6)))),
+    power: Math.round(lerp(70, 100, ease(seg(t, 14.8, 16.0)))),
+    fan: t < 17.2 ? "AUTO" : "100%",
+  });
+  const overheating = (t) => t > 15.6 && t < 17.6;
+
+  function step(dt) {
+    const t = (S.t += dt);
+    const o = oc(t);
+    const mult = (1 + o.core / 600 + o.mem / 3000) * (0.75 + 0.25 * ((o.power - 70) / 30));
+    let total = 0;
+
+    S.gpus.forEach((g, i) => {
+      const on = t >= INSTALL_AT[i] + 0.35;
+      g.load += ((on ? 0.92 + 0.08 * Math.sin(t * 1.3 + i) : 0) - g.load) * Math.min(1, dt * 2.5);
+      const hot = i === 2 && overheating(t);
+      const fanBoost = t > 17.2 ? -9 : 0;
+      const targetTemp = on ? 46 + g.load * 14 + (o.power - 70) * 0.35 + o.core * 0.03 + fanBoost + (hot ? 30 : 0) : 32;
+      g.temp += (targetTemp - g.temp) * Math.min(1, dt * (hot ? 1.6 : 0.8));
+      g.fan += dt * (on ? (t > 17.2 ? 26 : 8 + (g.temp - 40) * 0.35) : 0);
+      g.hash = on ? g.base * mult * g.load * (hot ? 0.55 : 1) : 0;
+      g.flash = Math.max(0, g.flash - dt * 3);
+      total += g.hash;
+
+      if (on) {
+        g.shareT -= dt * (g.hash / 70) * (t > 18 ? 1.6 : 1);
+        if (g.shareT <= 0) {
+          g.shareT = 0.7 + S.rnd() * 1.3;
+          g.flash = 1;
+          S.shares.push({ from: i, t: 0, dur: 0.9 + S.rnd() * 0.6, bend: (S.rnd() - 0.5) * 160, color: S.rnd() < 0.5 ? C.green : C.cyan });
+        }
+      }
+    });
+    if (overheating(t) && S.throttleToast === 0) { S.throttleToast = t; addLog("GPU 3 thermal throttle — 94°C!", C.red); }
+    if (t > 17.2 && t - dt <= 17.2) addLog("Fan curve set to 100% — temps stable", C.amber);
+
+    S.total = total;
+    S.nonce = (S.nonce + Math.floor(dt * 987654321)) >>> 0;
+
+    // Shares arrive at the block being mined.
+    for (let k = S.shares.length - 1; k >= 0; k--) {
+      const s = S.shares[k];
+      s.t += dt / s.dur;
+      if (s.t >= 1) {
+        S.shares.splice(k, 1);
+        const need = t > 18 ? 18 : 40;
+        S.blockProg += 1 / need;
+        S.balance += 0.012;
+        if (S.blockProg >= 1) blockFound();
+      }
+    }
+
+    S.histT += dt;
+    if (S.histT >= 0.2) { S.histT = 0; S.hist.push(total); if (S.hist.length > 120) S.hist.shift(); }
+
+    if (t > 29.4 && !S.poolJoined) { S.poolJoined = true; addLog("Joined pool NEON-FORGE (412 miners)", C.cyan); }
+    S.blockFlash = Math.max(0, S.blockFlash - dt * 0.8);
+    for (let k = S.pulses.length - 1; k >= 0; k--) { S.pulses[k].a -= dt * 0.9; S.pulses[k].r += dt * 220; if (S.pulses[k].a <= 0) S.pulses.splice(k, 1); }
+  }
+
+  function blockFound() {
+    S.blockProg = 0;
+    S.height++;
+    const reward = 6.25;
+    S.balance += reward;
+    S.chain.push({ h: S.height - 1, hash: hex(S.rnd, 4), glow: 1 });
+    if (S.chain.length > 12) S.chain.shift();
+    S.blockFlash = 1;
+    S.pulses.push({ a: 1, r: 0 });
+    addLog(`BLOCK #${fmt(S.height - 1, 0)} FOUND  +${reward} VZ`, C.green);
+  }
+
+  /* ---------- drawing: background ---------- */
+  function drawBg(t) {
+    ctx.fillStyle = C.bg; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = "rgba(0,255,170,0.035)"; ctx.lineWidth = 1;
+    ctx.beginPath();
+    const off = (t * 8) % 40;
+    for (let x = -off; x < W; x += 40) { ctx.moveTo(x, 0); ctx.lineTo(x, H); }
+    for (let y = -off; y < H; y += 40) { ctx.moveTo(0, y); ctx.lineTo(W, y); }
+    ctx.stroke();
+    const g = ctx.createRadialGradient(W / 2, H / 2, 100, W / 2, H / 2, 800);
+    g.addColorStop(0, "rgba(0,255,170,0.05)"); g.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  }
+
+  /* ---------- top bar ---------- */
+  function drawTopBar(t) {
+    ctx.fillStyle = "rgba(7,11,20,0.95)"; ctx.fillRect(0, 0, W, 56);
+    ctx.fillStyle = C.line; ctx.fillRect(0, 56, W, 1);
+    if (logo.complete) ctx.drawImage(logo, 20, 8, 40, 40);
+    text("VOZZ", 68, 37, `900 20px ${DISPLAY}`, C.text);
+    ctx.fillStyle = "rgba(255,43,214,0.15)"; rr(140, 18, 64, 22, 6); ctx.fill();
+    text("BETA", 172, 34, `700 11px ${DISPLAY}`, C.magenta, "center");
+
+    // Current scene chip
+    const sc = SCENES.find((s) => t >= s.at && t < s.end);
+    if (sc) {
+      const a = clamp(seg(t, sc.at, sc.at + 0.4) * seg(t, sc.end, sc.end - 0.3));
+      ctx.globalAlpha = a;
+      text(sc.n, 470, 34, `700 12px ${MONO}`, C.green);
+      text(sc.title, 498, 34, `700 13px ${DISPLAY}`, C.text);
+      ctx.globalAlpha = 1;
+    }
+
+    const stats = [
+      ["HASHRATE", fmt(S.total, 1) + " MH/s", C.green],
+      ["BLOCK", "#" + fmt(S.height, 0), C.text],
+      ["BALANCE", fmt(S.balance, 2) + " VZ", C.amber],
+    ];
+    let x = W - 24;
+    for (let i = stats.length - 1; i >= 0; i--) {
+      const [k, v, col] = stats[i];
+      ctx.font = `600 15px ${MONO}`;
+      const w = Math.max(ctx.measureText(v).width, 70);
+      text(k, x - w, 24, `600 9px ${BODY}`, C.muted);
+      text(v, x - w, 44, `600 15px ${MONO}`, col);
+      x -= w + 34;
+    }
+  }
+
+  /* ---------- rig ---------- */
+  const RIG = { x: 24, y: 76, w: 640, h: 444 };
+  function slotRect(i) {
+    const cw = 192, ch = 170, gx = 16, gy = 18;
+    const c = i % 3, r = Math.floor(i / 3);
+    return { x: RIG.x + 24 + c * (cw + gx), y: RIG.y + 52 + r * (ch + gy), w: cw, h: ch };
+  }
+
+  function drawFan(cx, cy, r, angle, hot) {
+    ctx.fillStyle = "#060a11";
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = hot ? "rgba(255,59,92,0.7)" : "rgba(130,150,180,0.3)"; ctx.lineWidth = 1.4; ctx.stroke();
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(angle);
+    ctx.fillStyle = hot ? "rgba(255,120,140,0.5)" : "rgba(160,185,215,0.38)";
+    for (let b = 0; b < 7; b++) {
+      ctx.rotate((Math.PI * 2) / 7);
+      ctx.beginPath(); ctx.moveTo(r * 0.2, 0);
+      ctx.quadraticCurveTo(r * 0.55, -r * 0.42, r * 0.92, -r * 0.12);
+      ctx.quadraticCurveTo(r * 0.6, r * 0.05, r * 0.2, 0); ctx.fill();
+    }
+    ctx.restore();
+    ctx.fillStyle = "#151f2e"; ctx.beginPath(); ctx.arc(cx, cy, r * 0.22, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = C.green; ctx.globalAlpha = 0.5; ctx.beginPath(); ctx.arc(cx, cy, r * 0.08, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1;
+  }
+
+  function drawGpu(i, t) {
+    const s = slotRect(i);
+    const g = S.gpus[i];
+    // empty slot
+    ctx.setLineDash([5, 5]);
+    ctx.strokeStyle = "rgba(255,255,255,0.12)"; ctx.lineWidth = 1;
+    rr(s.x, s.y, s.w, s.h, 10); ctx.stroke();
+    ctx.setLineDash([]);
+    const p = seg(t, INSTALL_AT[i], INSTALL_AT[i] + 0.55);
+    if (p <= 0) {
+      text("+", s.x + s.w / 2, s.y + s.h / 2 + 4, `400 34px ${BODY}`, "rgba(255,255,255,0.18)", "center");
+      text("EMPTY SLOT", s.x + s.w / 2, s.y + s.h / 2 + 28, `600 9px ${DISPLAY}`, "rgba(255,255,255,0.18)", "center");
+      return;
+    }
+    const k = easeOutBack(p);
+    const yOff = (1 - k) * -60;
+    ctx.save();
+    ctx.globalAlpha = clamp(p * 2);
+    ctx.translate(0, yOff);
+    const hot = i === 2 && overheating(t);
+    const accentHue = (t * 50 + i * 60) % 360;
+
+    if (g.flash > 0 || hot) { ctx.shadowColor = hot ? C.red : C.green; ctx.shadowBlur = hot ? 30 : 22 * g.flash; }
+    const grad = ctx.createLinearGradient(s.x, s.y, s.x, s.y + s.h);
+    grad.addColorStop(0, "#1b2537"); grad.addColorStop(1, "#0b111b");
+    ctx.fillStyle = grad; rr(s.x, s.y, s.w, s.h, 10); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = hot ? "rgba(255,59,92,0.8)" : "rgba(255,255,255,0.1)"; ctx.lineWidth = hot ? 2 : 1; ctx.stroke();
+
+    // RGB strip
+    const acc = hot ? C.red : `hsl(${accentHue},100%,60%)`;
+    ctx.fillStyle = acc; ctx.shadowColor = acc; ctx.shadowBlur = 12;
+    ctx.fillRect(s.x + 12, s.y + 8, s.w - 24, 3); ctx.shadowBlur = 0;
+
+    text(`GPU ${i + 1}`, s.x + 12, s.y + 28, `700 10px ${DISPLAY}`, C.muted);
+    text(g.model, s.x + s.w - 12, s.y + 28, `600 10px ${MONO}`, "rgba(220,235,255,0.7)", "right");
+
+    drawFan(s.x + s.w * 0.29, s.y + 78, 36, g.fan, hot);
+    drawFan(s.x + s.w * 0.71, s.y + 78, 36, g.fan * 1.05, hot);
+
+    // stats row
+    ctx.fillStyle = "rgba(0,0,0,0.35)"; rr(s.x + 8, s.y + 124, s.w - 16, 38, 7); ctx.fill();
+    text(fmt(g.hash, 1) + " MH/s", s.x + 16, s.y + 148, `600 13px ${MONO}`, hot ? C.red : C.green);
+    const tc = g.temp > 85 ? C.red : g.temp > 70 ? C.amber : C.cyan;
+    text(Math.round(g.temp) + "°C", s.x + s.w - 16, s.y + 148, `600 13px ${MONO}`, tc, "right");
+    // temp bar
+    ctx.fillStyle = "rgba(255,255,255,0.08)"; ctx.fillRect(s.x + 16, s.y + 154, s.w - 32, 3);
+    ctx.fillStyle = tc; ctx.fillRect(s.x + 16, s.y + 154, (s.w - 32) * clamp((g.temp - 30) / 70), 3);
+
+    if (hot && Math.floor(t * 4) % 2 === 0) {
+      ctx.fillStyle = "rgba(255,59,92,0.92)"; rr(s.x + s.w / 2 - 58, s.y - 10, 116, 22, 6); ctx.fill();
+      text("⚠ OVERHEATING", s.x + s.w / 2, s.y + 5, `700 10px ${DISPLAY}`, "#fff", "center");
+    }
+    ctx.restore();
+  }
+
+  function drawRig(t) {
+    panel(RIG.x, RIG.y, RIG.w, RIG.h, "RIG #1 — BASEMENT BEAST", true);
+    const installed = S.gpus.filter((_, i) => t >= INSTALL_AT[i] + 0.35).length;
+    text(`${installed}/6 GPUs  ·  PSU 1600W  ·  ${Math.round(installed * 210 * (0.8 + 0.2 * (oc(t).power - 70) / 30))}W`, RIG.x + RIG.w - 16, RIG.y + 24, `600 11px ${MONO}`, C.muted, "right");
+    for (let i = 0; i < 6; i++) drawGpu(i, t);
+  }
+
+  /* ---------- hashrate chart ---------- */
+  const CH = { x: 684, y: 76, w: 572, h: 180 };
+  function drawChart() {
+    panel(CH.x, CH.y, CH.w, CH.h, "HASHRATE — LIVE");
+    text(fmt(S.total, 1) + " MH/s", CH.x + CH.w - 16, CH.y + 26, `600 15px ${MONO}`, C.green, "right");
+    const px = CH.x + 16, py = CH.y + 44, pw = CH.w - 32, ph = CH.h - 60;
+    ctx.strokeStyle = "rgba(255,255,255,0.05)"; ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let k = 0; k <= 3; k++) { const y = py + (ph * k) / 3; ctx.moveTo(px, y); ctx.lineTo(px + pw, y); }
+    ctx.stroke();
+    const max = 900;
+    const n = S.hist.length;
+    if (n < 2) return;
+    ctx.beginPath();
+    S.hist.forEach((v, k) => {
+      const x = px + pw - (n - 1 - k) * (pw / 119);
+      const y = py + ph - (v / max) * ph;
+      k ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    });
+    const lastX = px + pw, lastY = py + ph - (S.hist[n - 1] / max) * ph;
+    ctx.strokeStyle = C.green; ctx.lineWidth = 2.2; ctx.shadowColor = C.green; ctx.shadowBlur = 10; ctx.stroke(); ctx.shadowBlur = 0;
+    ctx.lineTo(lastX, py + ph); ctx.lineTo(px + pw - (n - 1) * (pw / 119), py + ph); ctx.closePath();
+    const g = ctx.createLinearGradient(0, py, 0, py + ph);
+    g.addColorStop(0, "rgba(0,255,170,0.25)"); g.addColorStop(1, "rgba(0,255,170,0)");
+    ctx.fillStyle = g; ctx.fill();
+    ctx.fillStyle = C.green; ctx.beginPath(); ctx.arc(lastX, lastY, 4, 0, Math.PI * 2); ctx.fill();
+  }
+
+  /* ---------- overclock / pool panel ---------- */
+  const OC = { x: 684, y: 272, w: 572, h: 248 };
+  function slider(label, value, unit, frac, y, active, color = C.green) {
+    const x = OC.x + 20, w = OC.w - 40;
+    text(label, x, y, `600 12px ${BODY}`, active ? C.text : C.muted);
+    text(value + unit, x + w, y, `600 13px ${MONO}`, active ? color : C.muted, "right");
+    ctx.fillStyle = "rgba(255,255,255,0.08)"; rr(x, y + 10, w, 6, 3); ctx.fill();
+    ctx.fillStyle = color; rr(x, y + 10, Math.max(6, w * frac), 6, 3); ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.shadowColor = color; ctx.shadowBlur = active ? 14 : 0;
+    ctx.beginPath(); ctx.arc(x + w * frac, y + 13, 8, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+    return { x: x + w * frac, y: y + 13 };
+  }
+  const knobs = {};
+  function drawOverclock(t, alpha) {
+    ctx.globalAlpha = alpha;
+    panel(OC.x, OC.y, OC.w, OC.h, "OVERCLOCK PROFILE — ALL GPUs", t > 10 && t < 18);
+    const o = oc(t);
+    knobs.core = slider("Core clock", "+" + o.core, " MHz", o.core / 250, OC.y + 58, t > 11 && t < 13);
+    knobs.mem = slider("Memory clock", "+" + o.mem, " MHz", o.mem / 1500, OC.y + 108, t > 12.8 && t < 14.8);
+    knobs.power = slider("Power limit", o.power, "%", (o.power - 50) / 70, OC.y + 158, t > 14.6 && t < 16.2, C.amber);
+    // fan curve button
+    const bx = OC.x + 20, by = OC.y + 196;
+    const on = o.fan === "100%";
+    ctx.fillStyle = on ? "rgba(255,176,32,0.18)" : "rgba(255,255,255,0.05)";
+    rr(bx, by, 170, 34, 8); ctx.fill();
+    ctx.strokeStyle = on ? C.amber : "rgba(255,255,255,0.12)"; ctx.stroke();
+    text("FAN CURVE: " + o.fan, bx + 85, by + 22, `700 11px ${DISPLAY}`, on ? C.amber : C.muted, "center");
+    knobs.fan = { x: bx + 85, y: by + 17 };
+    const eff = S.total / Math.max(1, S.gpus.filter((g) => g.hash > 0).length * 210 * (0.8 + 0.2 * (o.power - 70) / 30));
+    text("EFFICIENCY", OC.x + OC.w - 150, by + 12, `600 9px ${BODY}`, C.muted);
+    text(fmt(eff * 1000, 0) + " KH/W", OC.x + OC.w - 150, by + 30, `600 14px ${MONO}`, C.cyan);
+    ctx.globalAlpha = 1;
+  }
+
+  const POOL = [
+    ["1", "NEON-FORGE", "412", "38.2 TH/s"],
+    ["2", "HashLords", "388", "35.9 TH/s"],
+    ["3", "Silicon Cartel", "301", "29.4 TH/s"],
+    ["4", "Block Party", "256", "21.7 TH/s"],
+  ];
+  function drawPool(t, alpha) {
+    ctx.globalAlpha = alpha;
+    panel(OC.x, OC.y, OC.w, OC.h, "MINING POOLS — SEASON 1", true);
+    const cols = [OC.x + 20, OC.x + 56, OC.x + 300, OC.x + 400];
+    text("#", cols[0], OC.y + 52, `600 10px ${BODY}`, C.muted);
+    text("POOL", cols[1], OC.y + 52, `600 10px ${BODY}`, C.muted);
+    text("MINERS", cols[2], OC.y + 52, `600 10px ${BODY}`, C.muted);
+    text("HASHRATE", cols[3], OC.y + 52, `600 10px ${BODY}`, C.muted);
+    POOL.forEach((r, k) => {
+      const y = OC.y + 64 + k * 34;
+      const joined = k === 0 && S.poolJoined;
+      const appear = seg(t, 27.4 + k * 0.15, 27.8 + k * 0.15);
+      ctx.globalAlpha = alpha * appear;
+      ctx.fillStyle = k === 0 ? (joined ? "rgba(0,255,170,0.12)" : "rgba(0,212,255,0.07)") : "rgba(255,255,255,0.02)";
+      rr(OC.x + 12, y, OC.w - 24, 28, 6); ctx.fill();
+      if (k === 0) { ctx.strokeStyle = joined ? C.green : "rgba(0,212,255,0.4)"; ctx.stroke(); }
+      text(r[0], cols[0] + 4, y + 19, `700 12px ${MONO}`, k === 0 ? C.amber : C.muted);
+      text(r[1], cols[1], y + 19, `600 13px ${BODY}`, C.text);
+      const miners = joined ? String(+r[2] + 1) : r[2];
+      text(miners, cols[2], y + 19, `600 12px ${MONO}`, C.muted);
+      text(r[3], cols[3], y + 19, `600 12px ${MONO}`, C.cyan);
+      if (k === 0) {
+        const bx = OC.x + OC.w - 104, by = y + 3;
+        ctx.fillStyle = joined ? C.green : "transparent";
+        ctx.strokeStyle = C.green;
+        rr(bx, by, 84, 22, 5); ctx.fill(); ctx.stroke();
+        text(joined ? "JOINED ✓" : "JOIN", bx + 42, by + 15, `700 10px ${DISPLAY}`, joined ? "#02110b" : C.green, "center");
+        knobs.join = { x: bx + 42, y: by + 11 };
+      }
+    });
+    ctx.globalAlpha = alpha;
+    if (S.poolJoined) {
+      text("Pool bonus active: +8% share reward", OC.x + 20, OC.y + OC.h - 18, `600 12px ${MONO}`, C.green);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  /* ---------- block lane ---------- */
+  const BL = { x: 24, y: 540, w: 640, h: 156 };
+  function cube(x, y, s, fill, glow, label, sub) {
+    const d = s * 0.18;
+    ctx.fillStyle = "rgba(0,255,170,0.1)";
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + d, y - d); ctx.lineTo(x + s + d, y - d); ctx.lineTo(x + s, y); ctx.fill();
+    ctx.fillStyle = "rgba(0,255,170,0.06)";
+    ctx.beginPath(); ctx.moveTo(x + s, y); ctx.lineTo(x + s + d, y - d); ctx.lineTo(x + s + d, y + s - d); ctx.lineTo(x + s, y + s); ctx.fill();
+    ctx.fillStyle = "#08101c"; ctx.fillRect(x, y, s, s);
+    if (fill > 0) { ctx.fillStyle = "rgba(0,255,170,0.25)"; ctx.fillRect(x, y + s * (1 - fill), s, s * fill); }
+    if (glow > 0) { ctx.shadowColor = C.green; ctx.shadowBlur = 28 * glow; }
+    ctx.strokeStyle = `rgba(0,255,170,${0.45 + 0.55 * glow})`; ctx.lineWidth = 1.4; ctx.strokeRect(x, y, s, s);
+    ctx.shadowBlur = 0;
+    text(label, x + s / 2, y + s * 0.45, `600 ${s * 0.19}px ${MONO}`, "rgba(225,240,255,0.9)", "center");
+    text(sub, x + s / 2, y + s * 0.76, `${s * 0.17}px ${MONO}`, "rgba(0,255,170,0.75)", "center");
+  }
+  function drawBlocks(t) {
+    panel(BL.x, BL.y, BL.w, BL.h, "BLOCKCHAIN", S.blockFlash > 0);
+    const s = 60, gap = 26;
+    const headX = BL.x + BL.w - s - 40, y = BL.y + 54;
+    // chain
+    ctx.strokeStyle = "rgba(0,255,170,0.35)"; ctx.setLineDash([4, 4]); ctx.lineDashOffset = -t * 20;
+    ctx.beginPath(); ctx.moveTo(BL.x + 16, y + s / 2); ctx.lineTo(headX, y + s / 2); ctx.stroke(); ctx.setLineDash([]);
+    for (let k = S.chain.length - 1, x = headX - s - gap; k >= 0 && x > BL.x; k--, x -= s + gap) {
+      const b = S.chain[k];
+      cube(x, y, s, 1, k === S.chain.length - 1 ? S.blockFlash : 0, "#" + (b.h % 100000), b.hash);
+    }
+    const pulse = 0.5 + 0.5 * Math.sin(t * 6);
+    cube(headX, y, s, S.blockProg, pulse * 0.5, "#" + (S.height % 100000), Math.round(S.blockProg * 100) + "%");
+    text("MINING", headX + s / 2, y - 18, `700 10px ${DISPLAY}`, C.green, "center");
+    text("nonce " + S.nonce.toString(16).padStart(8, "0"), headX + s / 2, y + s + 22, `10px ${MONO}`, C.muted, "center");
+    for (const p of S.pulses) {
+      ctx.strokeStyle = `rgba(0,255,170,${p.a})`; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(headX + s / 2, y + s / 2, p.r, 0, Math.PI * 2); ctx.stroke();
+    }
+    S.blockTarget = { x: headX + s / 2, y: y + s / 2 };
+  }
+
+  /* ---------- event log ---------- */
+  const LG = { x: 684, y: 540, w: 572, h: 156 };
+  function drawLog(t) {
+    panel(LG.x, LG.y, LG.w, LG.h, "EVENT LOG");
+    ctx.save();
+    ctx.beginPath(); ctx.rect(LG.x, LG.y + 34, LG.w, LG.h - 40); ctx.clip();
+    S.log.slice(0, 5).forEach((l, k) => {
+      const a = clamp((t - l.born) * 4);
+      const y = LG.y + 54 + k * 21 - (1 - a) * 10;
+      ctx.globalAlpha = a * (1 - k * 0.14);
+      text(l.ts, LG.x + 16, y, `11px ${MONO}`, "rgba(140,160,190,0.6)");
+      text(l.msg, LG.x + 92, y, `600 12px ${MONO}`, l.color);
+    });
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  /* ---------- shares ---------- */
+  function drawShares(t) {
+    if (!S.blockTarget) return;
+    ctx.globalCompositeOperation = "lighter";
+    for (const s of S.shares) {
+      const r = slotRect(s.from);
+      const sx = r.x + r.w / 2, sy = r.y + r.h - 10;
+      const tx = S.blockTarget.x, ty = S.blockTarget.y;
+      const cx = (sx + tx) / 2 + s.bend, cy = Math.max(sy, ty) - 40;
+      const pt = (u) => [(1 - u) * (1 - u) * sx + 2 * (1 - u) * u * cx + u * u * tx, (1 - u) * (1 - u) * sy + 2 * (1 - u) * u * cy + u * u * ty];
+      const [px, py] = pt(s.t), [qx, qy] = pt(Math.max(0, s.t - 0.08));
+      ctx.strokeStyle = s.color; ctx.globalAlpha = 0.45; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(qx, qy); ctx.lineTo(px, py); ctx.stroke();
+      ctx.globalAlpha = 1; ctx.fillStyle = s.color;
+      ctx.beginPath(); ctx.arc(px, py, 3, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalCompositeOperation = "source-over";
+  }
+
+  /* ---------- fake cursor ---------- */
+  function cursorAt(t) {
+    // keyframes: [time, x, y, pressed]
+    const K = [[2.6, 900, 640, 0]];
+    INSTALL_AT.forEach((at, i) => {
+      const r = slotRect(i);
+      K.push([at - 0.35, r.x + r.w / 2 + 6, r.y + r.h / 2 + 10, 0], [at - 0.05, r.x + r.w / 2, r.y + r.h / 2, 1], [at + 0.15, r.x + r.w / 2, r.y + r.h / 2, 0]);
+    });
+    const sx = OC.x + 20, sw = OC.w - 40;
+    K.push(
+      [10.6, sx + 4, OC.y + 71, 0], [11.15, sx, OC.y + 71, 1], [12.8, sx + sw * 0.6, OC.y + 71, 1], [13.0, sx + sw * 0.6, OC.y + 90, 0],
+      [13.0, sx + sw * 0.6, OC.y + 100, 0], [13.05, sx, OC.y + 121, 1], [14.6, sx + sw * 0.6, OC.y + 121, 1], [14.75, sx + sw * 0.6, OC.y + 140, 0],
+      [14.8, sx + sw * (20 / 70), OC.y + 171, 1], [16.0, sx + sw * (50 / 70), OC.y + 171, 1], [16.2, sx + sw * 0.6, OC.y + 190, 0],
+      [16.9, OC.x + 105, OC.y + 213, 0], [17.15, OC.x + 105, OC.y + 213, 1], [17.35, OC.x + 105, OC.y + 213, 0],
+      [19.5, 520, 470, 0], [26.5, 560, 500, 0],
+      [28.6, OC.x + OC.w - 62, OC.y + 78, 0], [29.3, OC.x + OC.w - 62, OC.y + 78, 1], [29.5, OC.x + OC.w - 62, OC.y + 78, 0],
+      [32.4, 1000, 460, 0],
+    );
+    if (t <= K[0][0]) return { x: K[0][1], y: K[0][2], p: 0 };
+    for (let k = 1; k < K.length; k++) {
+      if (t <= K[k][0]) {
+        const a = K[k - 1], b = K[k];
+        const u = b[0] === a[0] ? 1 : ease((t - a[0]) / (b[0] - a[0]));
+        return { x: lerp(a[1], b[1], u), y: lerp(a[2], b[2], u), p: a[3] && b[3] ? 1 : b[3] && u > 0.8 ? 1 : 0 };
+      }
+    }
+    const l = K[K.length - 1];
+    return { x: l[1], y: l[2], p: 0 };
+  }
+  function drawCursor(t) {
+    if (t < 2.6 || t > 33.2) return;
+    const c = cursorAt(t);
+    if (c.p) {
+      ctx.fillStyle = "rgba(0,255,170,0.25)";
+      ctx.beginPath(); ctx.arc(c.x, c.y, 16, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.save(); ctx.translate(c.x, c.y);
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, 20); ctx.lineTo(5, 15.5); ctx.lineTo(8.5, 23); ctx.lineTo(11.5, 21.6); ctx.lineTo(8, 14.5); ctx.lineTo(14, 14.5); ctx.closePath();
+    ctx.fillStyle = "#fff"; ctx.strokeStyle = "#05070d"; ctx.lineWidth = 1.5;
+    ctx.shadowColor = "rgba(0,0,0,0.6)"; ctx.shadowBlur = 6;
+    ctx.fill(); ctx.shadowBlur = 0; ctx.stroke();
+    ctx.restore();
+  }
+
+  /* ---------- title cards ---------- */
+  function drawSceneCard(t) {
+    for (const sc of SCENES) {
+      const a = seg(t, sc.at, sc.at + 0.35) * (1 - seg(t, sc.at + 1.5, sc.at + 1.95));
+      if (a <= 0) continue;
+      ctx.fillStyle = `rgba(3,5,10,${0.62 * a})`; ctx.fillRect(0, 57, W, H - 57);
+      ctx.globalAlpha = a;
+      const dy = (1 - ease(seg(t, sc.at, sc.at + 0.45))) * 20;
+      text(sc.n, W / 2, 300 + dy, `700 18px ${MONO}`, C.green, "center");
+      ctx.shadowColor = C.green; ctx.shadowBlur = 24;
+      text(sc.title, W / 2, 372 + dy, `900 58px ${DISPLAY}`, C.text, "center");
+      ctx.shadowBlur = 0;
+      text(sc.sub, W / 2, 416 + dy, `500 20px ${BODY}`, "#b9c7dc", "center");
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function drawThrottleToast(t) {
+    const a = seg(t, 15.7, 15.95) * (1 - seg(t, 17.5, 17.8));
+    if (a <= 0) return;
+    ctx.globalAlpha = a;
+    const w = 330, x = RIG.x + RIG.w / 2 - w / 2, y = RIG.y + RIG.h - 44;
+    ctx.fillStyle = "rgba(40,6,14,0.95)"; rr(x, y, w, 34, 8); ctx.fill();
+    ctx.strokeStyle = C.red; ctx.stroke();
+    const msg = t < 17.2 ? "⚠ GPU 3 THROTTLING — RAISE FAN CURVE" : "✓ FAN CURVE 100% — COOLING DOWN";
+    text(msg, x + w / 2, y + 22, `700 11px ${DISPLAY}`, t < 17.2 ? C.red : C.amber, "center");
+    ctx.globalAlpha = 1;
+  }
+
+  function drawBlockBanner(t) {
+    if (S.blockFlash <= 0 || t < 18) return;
+    const a = Math.min(1, S.blockFlash * 1.6);
+    ctx.globalAlpha = a;
+    const x = BL.x + BL.w - 250, y = BL.y - 20;
+    ctx.fillStyle = "rgba(0,255,170,0.95)"; rr(x, y, 230, 30, 8); ctx.fill();
+    text("BLOCK FOUND  +6.25 VZ", x + 115, y + 20, `900 12px ${DISPLAY}`, "#02110b", "center");
+    ctx.globalAlpha = 1;
+  }
+
+  /* ---------- intro / outro ---------- */
+  function drawIntro(t) {
+    const a = 1 - seg(t, 2.3, 2.9);
+    if (a <= 0) return;
+    ctx.fillStyle = `rgba(5,7,13,${a})`; ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = a * seg(t, 0.1, 0.8);
+    const sc = 0.85 + 0.15 * easeOutBack(seg(t, 0.1, 0.9));
+    const sz = 150 * sc;
+    ctx.shadowColor = C.green; ctx.shadowBlur = 40;
+    if (logo.complete) ctx.drawImage(logo, W / 2 - sz / 2, 170 - (sz - 150) / 2, sz, sz);
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = a * seg(t, 0.5, 1.1);
+    text("VOZZ", W / 2, 410, `900 72px ${DISPLAY}`, C.text, "center");
+    ctx.globalAlpha = a * seg(t, 0.9, 1.5);
+    text("CLOSED BETA  ·  GAMEPLAY PREVIEW", W / 2, 456, `700 18px ${DISPLAY}`, C.green, "center");
+    text("Work-in-progress build. All mining is simulated in-game.", W / 2, 500, `400 15px ${BODY}`, C.muted, "center");
+    ctx.globalAlpha = 1;
+  }
+
+  function drawOutro(t) {
+    const a = seg(t, 33.2, 33.9);
+    if (a <= 0) return;
+    ctx.fillStyle = `rgba(5,7,13,${0.94 * a})`; ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = a;
+    const sz = 120;
+    ctx.shadowColor = C.cyan; ctx.shadowBlur = 30 + 15 * Math.sin(t * 4);
+    if (logo.complete) ctx.drawImage(logo, W / 2 - sz / 2, 150, sz, sz);
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = seg(t, 33.5, 34.2);
+    text("MINE THE FUTURE", W / 2, 350, `900 54px ${DISPLAY}`, C.text, "center");
+    ctx.globalAlpha = seg(t, 34.0, 34.7);
+    text("Closed beta opening soon — join the waitlist to get early access.", W / 2, 396, `500 19px ${BODY}`, "#b9c7dc", "center");
+    const ba = seg(t, 34.5, 35.2);
+    ctx.globalAlpha = ba;
+    const bw = 300, bx = W / 2 - bw / 2, by = 440;
+    const g = ctx.createLinearGradient(bx, 0, bx + bw, 0);
+    g.addColorStop(0, C.green); g.addColorStop(1, C.cyan);
+    ctx.fillStyle = g; ctx.shadowColor = C.green; ctx.shadowBlur = 30 + 10 * Math.sin(t * 5);
+    rr(bx, by, bw, 58, 14); ctx.fill(); ctx.shadowBlur = 0;
+    text("JOIN WAITLIST  →", W / 2, by + 36, `700 18px ${DISPLAY}`, "#02110b", "center");
+    ctx.globalAlpha = 1;
+  }
+
+  /* ---------- frame ---------- */
+  const FIXED_DT = 1 / 120;
+  function advanceTo(t) {
+    if (t < S.t) reset();
+    while (S.t + FIXED_DT <= t) step(FIXED_DT);
+  }
+  function draw(t) {
+    drawBg(t);
+    drawTopBar(t);
+    drawRig(t);
+    drawChart();
+    const poolA = seg(t, 27, 27.5);
+    if (poolA < 1) drawOverclock(t, 1 - poolA);
+    if (poolA > 0) drawPool(t, poolA);
+    drawBlocks(t);
+    drawLog(t);
+    drawShares(t);
+    drawThrottleToast(t);
+    drawBlockBanner(t);
+    drawCursor(t);
+    drawSceneCard(t);
+    drawIntro(t);
+    drawOutro(t);
+  }
+
+  window.renderAt = (t) => { advanceTo(t); draw(t); };
+  window.DURATION = DURATION;
+
+  const logo = new Image();
+  logo.src = "../assets/logo-mark.svg";
+  reset();
+
+  window.ready = Promise.all([
+    ...["900 20px Orbitron", "700 20px Orbitron", "500 20px Orbitron", "400 12px 'JetBrains Mono'", "600 12px 'JetBrains Mono'", "400 12px Inter", "500 12px Inter", "600 12px Inter"].map((f) => document.fonts.load(f)),
+    new Promise((r) => (logo.complete ? r() : (logo.onload = r))),
+  ]).then(() => true);
+
+  // Real-time preview when opened directly (render.js sets ?capture).
+  if (!location.search.includes("capture")) {
+    window.ready.then(() => {
+      const start = performance.now();
+      (function loop(now) {
+        window.renderAt(((now - start) / 1000) % DURATION);
+        requestAnimationFrame(loop);
+      })(start);
+    });
+  }
+})();
+</script>
+</body>
+</html>

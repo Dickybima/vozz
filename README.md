@@ -13,6 +13,9 @@ Waitlist landing page for VOZZ, a GPU-themed mining simulation game, with an ani
 - `assets/logo.svg` — full logo (mark + wordmark)
 - `assets/logo-mark.svg` — logo mark only (hex GPU chip with a V and a mined block)
 - `favicon.svg` — simplified mark for small sizes
+- `assets/beta-mining.mp4` / `.webm` + `beta-mining-poster.jpg` — 38s "Beta Mining Gameplay" video, opened from the **Beta Gameplay** item in the top menu
+- `video/beta-demo.html` — source of that video (a scripted canvas mock of the beta UI; open it in a browser to preview in real time)
+- `video/render.js` — renders the video frame by frame and encodes it
 
 ## Running
 
@@ -20,6 +23,16 @@ No build step — open `index.html` in a browser, or:
 
 ```bash
 python3 -m http.server 8000
+```
+
+## Re-rendering the beta video
+
+Requires Node with Playwright and ffmpeg (libx264 + libvpx-vp9):
+
+```bash
+node video/render.js            # writes assets/beta-mining.mp4 + poster
+ffmpeg -i assets/beta-mining.mp4 -c:v libvpx-vp9 -crf 36 -b:v 0 assets/beta-mining.webm
+node video/render.js 6 16 22    # just save PNG stills at those seconds
 ```
 
 ## Waitlist flow

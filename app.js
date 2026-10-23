@@ -258,6 +258,41 @@
     if (e.key === "Escape" && !modal.hidden) closeModal();
   });
 
+  /* ---------- Beta gameplay video ---------- */
+  const videoModal = $("video-modal");
+  const video = $("beta-video");
+  let videoLastFocus = null;
+
+  function openVideo() {
+    videoLastFocus = document.activeElement;
+    videoModal.hidden = false;
+    document.body.style.overflow = "hidden";
+    videoModal.querySelector(".modal-close").focus();
+    video.play().catch(() => { /* autoplay blocked: controls are visible */ });
+  }
+
+  function closeVideo() {
+    video.pause();
+    videoModal.hidden = true;
+    document.body.style.overflow = "";
+    if (videoLastFocus) videoLastFocus.focus();
+  }
+
+  document.querySelectorAll("[data-open-video]").forEach((el) =>
+    el.addEventListener("click", (e) => {
+      e.preventDefault();
+      openVideo();
+    })
+  );
+  videoModal.querySelectorAll("[data-close-video]").forEach((el) => el.addEventListener("click", closeVideo));
+  $("video-join").addEventListener("click", () => {
+    closeVideo();
+    openModal();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !videoModal.hidden) closeVideo();
+  });
+
   /* ---------- Wallet address ---------- */
   const isEvm = (v) => /^0x[a-fA-F0-9]{40}$/.test(v);
   const isSolana = (v) => /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(v);

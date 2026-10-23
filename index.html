@@ -23,6 +23,10 @@
       <img src="assets/logo.svg" alt="VOZZ" width="123" height="40" />
     </a>
     <nav class="nav-links">
+      <a href="#beta-video" class="nav-video" data-open-video>
+        <span class="play-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l11-6.5Z"/></svg></span>
+        <span>Beta <span class="nav-video-long">Gameplay</span></span>
+      </a>
       <a href="#features">Features</a>
       <a href="#roadmap">Roadmap</a>
       <a href="#faq">FAQ</a>
@@ -193,6 +197,28 @@
     </span>
     <span class="footer-hash" id="footer-hash">0x0000000000000000</span>
   </footer>
+
+  <!-- Beta mining gameplay video -->
+  <div class="modal video-modal" id="video-modal" role="dialog" aria-modal="true" aria-labelledby="video-title" hidden>
+    <div class="modal-backdrop" data-close-video></div>
+    <div class="video-panel">
+      <div class="video-head">
+        <span class="video-tag"><span class="dot"></span> Closed Beta</span>
+        <h2 id="video-title">Beta Mining Gameplay</h2>
+        <button type="button" class="modal-close" data-close-video aria-label="Close video">&times;</button>
+      </div>
+      <div class="video-frame">
+        <video id="beta-video" poster="assets/beta-mining-poster.jpg" controls playsinline preload="none">
+          <source src="assets/beta-mining.mp4" type="video/mp4" />
+          <source src="assets/beta-mining.webm" type="video/webm" />
+        </video>
+      </div>
+      <div class="video-foot">
+        <p>Work-in-progress build. Build your rig, overclock, mine blocks and join a pool.</p>
+        <button type="button" class="btn btn-primary btn-small" id="video-join">Join Waitlist</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Waitlist missions modal -->
   <div class="modal" id="waitlist-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" hidden>
