@@ -4,8 +4,11 @@
  *   PRIVATE_KEY=0x... npm run deploy:testnet
  *   PRIVATE_KEY=0x... OWNER=0xYourSafe npm run deploy:mainnet
  *
+ * Mint payments are forwarded on every mint to PAYOUT (default: the VOZZ treasury below).
+ *
  * Env: PRIVATE_KEY (required, the deployer, needs a little ETH for gas),
- *      OWNER (optional, who can withdraw revenue / close minting; defaults to the deployer),
+ *      OWNER (optional, who can change the payout / pause minting; defaults to the deployer),
+ *      PAYOUT (optional, where mint payments go; defaults to DEFAULT_PAYOUT),
  *      RPC_URL (optional, overrides the RPC from config.js).
  */
 import fs from "node:fs";
@@ -15,6 +18,7 @@ import { fileURLToPath } from "node:url";
 import { ethers } from "ethers";
 import { compile } from "./compile.mjs";
 
+const DEFAULT_PAYOUT = "0xC7AdA4182aA21A8840Dc0bC732a36B2D32A2dDA1";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const CONFIG = path.join(ROOT, "config.js");
 
@@ -40,13 +44,16 @@ if (Number(chainId) !== net.chainId) {
 
 const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 const owner = process.env.OWNER || wallet.address;
+const payout = process.env.PAYOUT || DEFAULT_PAYOUT;
 if (!ethers.isAddress(owner)) throw new Error("OWNER is not a valid address");
+if (!ethers.isAddress(payout)) throw new Error("PAYOUT is not a valid address");
 console.log(`Network:  ${net.name} (${net.chainId})`);
 console.log(`Deployer: ${wallet.address} (${ethers.formatEther(await provider.getBalance(wallet.address))} ETH)`);
 console.log(`Owner:    ${owner}`);
+console.log(`Payout:   ${payout}`);
 
 const { abi, bytecode } = compile();
-const contract = await new ethers.ContractFactory(abi, bytecode, wallet).deploy(owner);
+const contract = await new ethers.ContractFactory(abi, bytecode, wallet).deploy(owner, payout);
 console.log(`Deploying… tx ${contract.deploymentTransaction().hash}`);
 await contract.waitForDeployment();
 const address = await contract.getAddress();

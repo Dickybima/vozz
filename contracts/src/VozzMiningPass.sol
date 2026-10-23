@@ -8,7 +8,8 @@ import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 /// @title VOZZ Mining Pass
 /// @notice ERC-721 pass that unlocks mining in the VOZZ game. One mint per wallet,
-///         fixed price of 0.001 ETH. Artwork and metadata are generated fully on-chain.
+///         fixed price of 0.001 ETH, forwarded straight to the payout address on every
+///         mint. Artwork and metadata are generated fully on-chain.
 contract VozzMiningPass is ERC721, Ownable {
     using Strings for uint256;
 
@@ -16,16 +17,22 @@ contract VozzMiningPass is ERC721, Ownable {
 
     uint256 public totalSupply;
     bool public mintOpen = true;
+    address payable public payout;
 
     error WrongPrice();
     error AlreadyHasPass();
     error MintClosed();
     error WithdrawFailed();
+    error PayoutFailed();
+    error ZeroAddress();
 
     event MintOpenSet(bool open);
     event Withdrawn(address indexed to, uint256 amount);
+    event PayoutSet(address indexed payout);
 
-    constructor(address initialOwner) ERC721("VOZZ Mining Pass", "VOZZPASS") Ownable(initialOwner) {}
+    constructor(address initialOwner, address payable payout_) ERC721("VOZZ Mining Pass", "VOZZPASS") Ownable(initialOwner) {
+        _setPayout(payout_);
+    }
 
     /// @notice Mint one Mining Pass to the caller for exactly 0.001 ETH.
     function mint() external payable returns (uint256 tokenId) {
@@ -35,6 +42,9 @@ contract VozzMiningPass is ERC721, Ownable {
 
         tokenId = ++totalSupply;
         _mint(msg.sender, tokenId);
+
+        (bool ok, ) = payout.call{value: msg.value}("");
+        if (!ok) revert PayoutFailed();
     }
 
     /// @notice True when `account` currently holds at least one pass.
@@ -47,7 +57,19 @@ contract VozzMiningPass is ERC721, Ownable {
         emit MintOpenSet(open);
     }
 
-    /// @notice Send the collected mint revenue to `to`.
+    /// @notice Change where mint payments are sent.
+    function setPayout(address payable newPayout) external onlyOwner {
+        _setPayout(newPayout);
+    }
+
+    function _setPayout(address payable newPayout) private {
+        if (newPayout == address(0)) revert ZeroAddress();
+        payout = newPayout;
+        emit PayoutSet(newPayout);
+    }
+
+    /// @notice Recover any ETH left in the contract (mints forward payment immediately,
+    ///         so this is only for ETH sent here some other way).
     function withdraw(address payable to) external onlyOwner {
         uint256 amount = address(this).balance;
         (bool ok, ) = to.call{value: amount}("");

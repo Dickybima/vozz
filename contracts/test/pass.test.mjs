@@ -13,9 +13,10 @@ async function setup() {
   const provider = new ethers.BrowserProvider(g);
   const [owner, alice, bob] = await Promise.all([0, 1, 2].map((i) => provider.getSigner(i)));
   const factory = new ethers.ContractFactory(abi, bytecode, owner);
-  const pass = await factory.deploy(await owner.getAddress());
+  const payout = ethers.Wallet.createRandom().address;
+  const pass = await factory.deploy(await owner.getAddress(), payout);
   await pass.waitForDeployment();
-  return { g, provider, pass, owner, alice, bob };
+  return { g, provider, pass, owner, alice, bob, payout };
 }
 
 // ganache doesn't hand revert data to ethers on estimateGas, so simulate the call
@@ -67,16 +68,32 @@ test("owner can close minting", async () => {
   assert.equal(await revertName(ctx, ctx.alice, "mint", [], PRICE), "MintClosed");
 });
 
-test("only the owner can withdraw, and receives all revenue", async () => {
-  const ctx = await setup();
-  const { provider, pass, owner, alice, bob } = ctx;
+test("every mint payment goes straight to the payout address", async () => {
+  const { provider, pass, alice, bob, payout } = await setup();
+  assert.equal(await pass.payout(), payout);
   await (await pass.connect(alice).mint({ value: PRICE })).wait();
+  assert.equal(await provider.getBalance(payout), PRICE);
   await (await pass.connect(bob).mint({ value: PRICE })).wait();
-  const target = ethers.Wallet.createRandom().address;
-  assert.equal(await revertName(ctx, alice, "withdraw", [target]), "OwnableUnauthorizedAccount");
-  await (await pass.connect(owner).withdraw(target)).wait();
-  assert.equal(await provider.getBalance(target), PRICE * 2n);
+  assert.equal(await provider.getBalance(payout), PRICE * 2n);
   assert.equal(await provider.getBalance(await pass.getAddress()), 0n);
+});
+
+test("only the owner can change the payout address, and never to zero", async () => {
+  const ctx = await setup();
+  const { provider, pass, owner, alice } = ctx;
+  const next = ethers.Wallet.createRandom().address;
+  assert.equal(await revertName(ctx, alice, "setPayout", [next]), "OwnableUnauthorizedAccount");
+  assert.equal(await revertName(ctx, owner, "setPayout", [ethers.ZeroAddress]), "ZeroAddress");
+  await (await pass.connect(owner).setPayout(next)).wait();
+  await (await pass.connect(alice).mint({ value: PRICE })).wait();
+  assert.equal(await provider.getBalance(next), PRICE);
+});
+
+test("only the owner can withdraw stray ETH", async () => {
+  const ctx = await setup();
+  const target = ethers.Wallet.createRandom().address;
+  assert.equal(await revertName(ctx, ctx.alice, "withdraw", [target]), "OwnableUnauthorizedAccount");
+  assert.equal(await revertName(ctx, ctx.owner, "withdraw", [target]), null);
 });
 
 test("tokenURI returns on-chain JSON with an SVG image", async () => {
