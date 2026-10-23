@@ -6,13 +6,23 @@
  * browser, so a mission counts as done once its intent link has been opened.
  *
  * Signups are stored in localStorage by default. To collect them on a server,
- * set WAITLIST_ENDPOINT to a URL that accepts a JSON POST: { wallet, ref, tasks }.
+ * set WAITLIST_ENDPOINT to a URL that accepts a JSON POST: { wallet, chainId, ref, tasks }.
+ *
+ * VOZZ runs on Robinhood Chain (an EVM Layer 2), so wallets are 0x addresses.
  */
 (() => {
   const WAITLIST_ENDPOINT = ""; // e.g. "https://api.example.com/waitlist"
   const BETA_DATE = new Date("2027-01-15T12:00:00+07:00");
   const BASE_WAITLIST = 12847; // seed count shown before any real signups
   const STORAGE_KEY = "vozz-waitlist";
+  // Robinhood Chain mainnet. Docs: https://docs.robinhood.com/chain
+  const CHAIN = {
+    chainId: "0x1237", // 4663
+    chainName: "Robinhood Chain",
+    nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+    rpcUrls: ["https://rpc.mainnet.chain.robinhood.com"],
+    blockExplorerUrls: ["https://robinhoodchain.blockscout.com"],
+  };
   const STARTER_GPUS = ["VX 5070", "RZ 6800 XT", "VX 6090", "RZ 7900"];
 
   // X account and post used for the missions — replace with the real ones.
@@ -145,6 +155,7 @@
     $("ticket-id").textContent = "#" + entry.id;
     $("ticket-pos").textContent = "#" + entry.position.toLocaleString("en-US");
     $("ticket-gpu").textContent = entry.gpu;
+    $("ticket-wallet").textContent = shortAddr(entry.wallet || "");
     ticket.hidden = false;
     joinBtn.hidden = true;
     msg.className = "form-msg success";
@@ -294,9 +305,7 @@
   });
 
   /* ---------- Wallet address ---------- */
-  const isEvm = (v) => /^0x[a-fA-F0-9]{40}$/.test(v);
-  const isSolana = (v) => /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(v);
-  const isWallet = (v) => isEvm(v) || isSolana(v);
+  const isWallet = (v) => /^0x[a-fA-F0-9]{40}$/.test(v);
 
   function addressError(text) {
     const wrap = walletInput.closest(".address-input");
@@ -317,6 +326,34 @@
     walletInput.focus();
   });
 
+  // Optional: fill the address from an injected EVM wallet and add/switch to Robinhood Chain.
+  $("add-chain-btn").addEventListener("click", async () => {
+    const eth = window.ethereum;
+    if (!eth) {
+      toast("No wallet found — install MetaMask or paste your address");
+      return;
+    }
+    try {
+      const [account] = await eth.request({ method: "eth_requestAccounts" });
+      if (account) {
+        walletInput.value = account;
+        walletInput.dispatchEvent(new Event("input"));
+      }
+      try {
+        await eth.request({ method: "wallet_switchEthereumChain", params: [{ chainId: CHAIN.chainId }] });
+      } catch (err) {
+        if (err && err.code === 4902) {
+          await eth.request({ method: "wallet_addEthereumChain", params: [CHAIN] });
+        } else {
+          throw err;
+        }
+      }
+      toast("Connected to Robinhood Chain ✓");
+    } catch (err) {
+      toast(err && err.code === 4001 ? "Request cancelled in wallet" : "Couldn't connect — paste your address instead");
+    }
+  });
+
   walletInput.addEventListener("input", () => {
     walletInput.closest(".address-input").classList.remove("invalid");
     addressMsg.className = "form-msg";
@@ -332,7 +369,7 @@
       return;
     }
     if (!isWallet(wallet)) {
-      addressError("✗ That doesn't look like a valid wallet address.");
+      addressError("✗ Enter a valid Robinhood Chain (EVM) address: 0x + 40 hex characters.");
       walletInput.focus();
       return;
     }
@@ -349,7 +386,7 @@
         const res = await fetch(WAITLIST_ENDPOINT, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ wallet, ref, tasks: TASKS.map((t) => t.id) }),
+          body: JSON.stringify({ wallet, chainId: parseInt(CHAIN.chainId, 16), ref, tasks: TASKS.map((t) => t.id) }),
         });
         if (!res.ok) throw new Error("HTTP " + res.status);
       } else {
@@ -362,6 +399,7 @@
 
       const entry = {
         wallet,
+        chainId: parseInt(CHAIN.chainId, 16),
         ref,
         id: Math.random().toString(16).slice(2, 8).toUpperCase(),
         position: waitlistCount,

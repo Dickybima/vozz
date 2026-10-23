@@ -2,7 +2,7 @@
 
 # VOZZ — GPU Mining Game Waitlist
 
-Waitlist landing page for VOZZ, a GPU-themed mining simulation game, with an animated GPU mining simulation running in the background (canvas).
+Waitlist landing page for VOZZ, a GPU-themed mining simulation game built on **Robinhood Chain**, with an animated GPU mining simulation running in the background (canvas).
 
 ## Files
 
@@ -44,7 +44,7 @@ Clicking **Join Waitlist** opens a modal with 4 missions that unlock in order:
 3. Recast (repost) the post
 4. Comment on the post
 
-Each mission button opens the matching X intent link in a new tab, then marks the mission done after a short "verifying" delay. X actions can't be verified from the browser alone, so this only confirms that the link was opened. Once all 4 are done, the wallet address step appears, with a **Paste** button. It accepts EVM (`0x…`) or Solana addresses.
+Each mission button opens the matching X intent link in a new tab, then marks the mission done after a short "verifying" delay. X actions can't be verified from the browser alone, so this only confirms that the link was opened. Once all 4 are done, the Robinhood Chain wallet address step appears, with a **Paste** button. Only EVM addresses (`0x` + 40 hex characters) are accepted. There is also an optional **Connect wallet & add Robinhood Chain** button that reads the address from an injected wallet (e.g. MetaMask) and switches it to — or adds — Robinhood Chain.
 
 Set the X account and post in `app.js`:
 
@@ -53,8 +53,12 @@ const X_HANDLE = "vozzgame";
 const X_POST_ID = "1850000000000000000";
 ```
 
+## Robinhood Chain
+
+Network settings live in the `CHAIN` constant in `app.js` (mainnet, chain ID 4663 / `0x1237`, gas in ETH, RPC `https://rpc.mainnet.chain.robinhood.com`, explorer `https://robinhoodchain.blockscout.com`). Check them against [docs.robinhood.com/chain](https://docs.robinhood.com/chain) before launch; for the testnet use chain ID 46630 and `https://rpc.testnet.chain.robinhood.com`.
+
 ## Storing waitlist signups
 
-By default signups are only saved in the visitor's browser (`localStorage`). To collect real signups, set `WAITLIST_ENDPOINT` in `app.js` to a URL that accepts a JSON `POST` of `{ wallet, ref, tasks }` (e.g. Formspree, Supabase, or your own API).
+By default signups are only saved in the visitor's browser (`localStorage`). To collect real signups, set `WAITLIST_ENDPOINT` in `app.js` to a URL that accepts a JSON `POST` of `{ wallet, chainId, ref, tasks }` (e.g. Formspree, Supabase, or your own API).
 
 The beta date is set via `BETA_DATE` in `app.js`.

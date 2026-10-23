@@ -27,7 +27,7 @@
   const C = {
     bg: "#05070d", panel: "#0b1220", panel2: "#0e1728", line: "rgba(255,255,255,0.07)",
     text: "#e6f1ff", muted: "#8a9bb4", green: "#00ffaa", cyan: "#00d4ff",
-    magenta: "#ff2bd6", amber: "#ffb020", red: "#ff3b5c", violet: "#7a5cff",
+    magenta: "#ff2bd6", amber: "#ffb020", red: "#ff3b5c", violet: "#7a5cff", lime: "#ccff00",
   };
   const MONO = "'JetBrains Mono', monospace";
   const DISPLAY = "Orbitron, sans-serif";
@@ -98,6 +98,7 @@
       throttleToast: 0, total: 0,
     };
     for (let i = 0; i < 9; i++) S.chain.push({ h: S.height - 9 + i, hash: hex(rnd, 4) });
+    addLog("Wallet 0x7a3f…c91e connected · Robinhood Chain", C.lime);
     addLog("Rig 'Basement Beast' online", C.muted);
   }
   const hex = (rnd, n) => { let s = "0000"; for (let i = 0; i < n; i++) s += "0123456789abcdef"[(rnd() * 16) | 0]; return s; };
@@ -179,7 +180,7 @@
     if (S.chain.length > 12) S.chain.shift();
     S.blockFlash = 1;
     S.pulses.push({ a: 1, r: 0 });
-    addLog(`BLOCK #${fmt(S.height - 1, 0)} FOUND  +${reward} VZ`, C.green);
+    addLog(`BLOCK #${fmt(S.height - 1, 0)} FOUND  +${reward} VZ → 0x7a3f…c91e`, C.green);
   }
 
   /* ---------- drawing: background ---------- */
@@ -204,14 +205,18 @@
     text("VOZZ", 68, 37, `900 20px ${DISPLAY}`, C.text);
     ctx.fillStyle = "rgba(255,43,214,0.15)"; rr(140, 18, 64, 22, 6); ctx.fill();
     text("BETA", 172, 34, `700 11px ${DISPLAY}`, C.magenta, "center");
+    ctx.fillStyle = "rgba(204,255,0,0.08)"; rr(214, 18, 196, 22, 6); ctx.fill();
+    ctx.strokeStyle = "rgba(204,255,0,0.35)"; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = C.lime; ctx.beginPath(); ctx.arc(226, 29, 3.5, 0, Math.PI * 2); ctx.fill();
+    text("ROBINHOOD CHAIN · 4663", 236, 33, `600 10px ${MONO}`, C.lime);
 
     // Current scene chip
     const sc = SCENES.find((s) => t >= s.at && t < s.end);
     if (sc) {
       const a = clamp(seg(t, sc.at, sc.at + 0.4) * seg(t, sc.end, sc.end - 0.3));
       ctx.globalAlpha = a;
-      text(sc.n, 470, 34, `700 12px ${MONO}`, C.green);
-      text(sc.title, 498, 34, `700 13px ${DISPLAY}`, C.text);
+      text(sc.n, 452, 34, `700 12px ${MONO}`, C.green);
+      text(sc.title, 480, 34, `700 13px ${DISPLAY}`, C.text);
       ctx.globalAlpha = 1;
     }
 
@@ -441,7 +446,7 @@
     text(sub, x + s / 2, y + s * 0.76, `${s * 0.17}px ${MONO}`, "rgba(0,255,170,0.75)", "center");
   }
   function drawBlocks(t) {
-    panel(BL.x, BL.y, BL.w, BL.h, "BLOCKCHAIN", S.blockFlash > 0);
+    panel(BL.x, BL.y, BL.w, BL.h, "BLOCKS — ROBINHOOD CHAIN", S.blockFlash > 0);
     const s = 60, gap = 26;
     const headX = BL.x + BL.w - s - 40, y = BL.y + 54;
     // chain
@@ -596,7 +601,7 @@
     text("VOZZ", W / 2, 410, `900 72px ${DISPLAY}`, C.text, "center");
     ctx.globalAlpha = a * seg(t, 0.9, 1.5);
     text("CLOSED BETA  ·  GAMEPLAY PREVIEW", W / 2, 456, `700 18px ${DISPLAY}`, C.green, "center");
-    text("Work-in-progress build. All mining is simulated in-game.", W / 2, 500, `400 15px ${BODY}`, C.muted, "center");
+    text("Built on Robinhood Chain  ·  Work-in-progress build. All mining is simulated in-game.", W / 2, 500, `400 15px ${BODY}`, C.muted, "center");
     ctx.globalAlpha = 1;
   }
 
@@ -612,7 +617,7 @@
     ctx.globalAlpha = seg(t, 33.5, 34.2);
     text("MINE THE FUTURE", W / 2, 350, `900 54px ${DISPLAY}`, C.text, "center");
     ctx.globalAlpha = seg(t, 34.0, 34.7);
-    text("Closed beta opening soon — join the waitlist to get early access.", W / 2, 396, `500 19px ${BODY}`, "#b9c7dc", "center");
+    text("Closed beta on Robinhood Chain opening soon — join the waitlist for early access.", W / 2, 396, `500 19px ${BODY}`, "#b9c7dc", "center");
     const ba = seg(t, 34.5, 35.2);
     ctx.globalAlpha = ba;
     const bw = 300, bx = W / 2 - bw / 2, by = 440;

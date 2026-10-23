@@ -5,7 +5,7 @@
  *   1. Hash rain   — falling hex characters on an offscreen canvas with fading trails
  *   2. GPU wall    — a tiled grid of graphics cards with spinning fans, RGB strips and live load/temp
  *   3. Shares      — glowing packets that fly from each GPU to the block currently being mined
- *   4. Blockchain  — a lane of blocks along the bottom; when a block fills up it is "found"
+ *   4. Blockchain  — a Robinhood Chain lane of blocks along the bottom; when a block fills up it is "found"
  *
  * Exposes `window.miningSim` (hashrate / blocks) and dispatches a `block-found` event on window.
  */
@@ -476,6 +476,10 @@
     ctx.fillRect(0, laneY - 40, W, H - laneY + 40);
 
     const midY = laneY + blockSize / 2;
+
+    ctx.font = `600 ${Math.max(9, blockSize * 0.2)}px 'JetBrains Mono', monospace`;
+    ctx.fillStyle = "rgba(204,255,0,0.55)";
+    ctx.fillText("ROBINHOOD CHAIN · L2 · ID 4663", 16, laneY - blockSize * 0.4);
 
     // Links between blocks
     ctx.strokeStyle = "rgba(0,255,170,0.35)";
