@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>VOZZ trailer — video source</title>
+<!--
+  Source for assets/vozz-trailer.mp4, rendered frame by frame by video/render-trailer.js.
+  Kinetic typography + glitch effects over clips cut from the recorded gameplay and
+  waitlist videos, timed to a 128 BPM beat (see video/trailer-music.py).
+  window.renderAt(t) draws frame t (seconds); clip frames are served from /frames/<id>/.
+-->
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=JetBrains+Mono:wght@500;700&family=Inter:wght@500;700&display=swap" rel="stylesheet" />
+<style>html,body{margin:0;background:#000}canvas{display:block}</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script>
+(() => {
+  const W = 1920, H = 1080;
+  const B = 60 / 128, BAR = B * 4;
+  const DURATION = BAR * 24;
+  const canvas = document.getElementById("c");
+  const ctx = canvas.getContext("2d");
+  const CLIPS = window.CLIPS || {};
+
+  const G = "#00ffaa", CY = "#00d4ff", MG = "#ff2bd6", AM = "#ffb020", RD = "#ff3b5c", LI = "#ccff00";
+  const DISPLAY = "Orbitron, sans-serif", MONO = "'JetBrains Mono', monospace", BODY = "Inter, sans-serif";
+
+  /* ---------- helpers ---------- */
+  const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
+  const seg = (t, a, b) => clamp((t - a) / (b - a));
+  const easeOut = (p) => 1 - Math.pow(1 - p, 3);
+  const easeIO = (p) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
+  const hash = (n) => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+  const fi = (t) => Math.floor(t * 30);
+
+  const imgCache = new Map();
+  function loadImg(src) {
+    if (imgCache.has(src)) return imgCache.get(src);
+    const p = new Promise((res) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = src; });
+    imgCache.set(src, p);
+    if (imgCache.size > 40) imgCache.delete(imgCache.keys().next().value);
+    return p;
+  }
+  const clipFrame = (id, lt) => {
+    const c = CLIPS[id];
+    const n = clamp(Math.round(lt * 30), 0, c.frames - 1) + 1;
+    return loadImg(`/frames/${id}/${String(n).padStart(5, "0")}.jpg`);
+  };
+
+  // Draw a clip frame cropped to c.crop, with a push-in zoom (1 → zoomTo) over the scene.
+  function drawClip(img, id, p, zoomTo = 1.12, filter = "") {
+    if (!img) return;
+    const [cx, cy, cw, ch] = CLIPS[id].crop;
+    const z = 1 + (zoomTo - 1) * easeIO(p);
+    const sw = cw / z, sh = ch / z;
+    ctx.save();
+    if (filter) ctx.filter = filter;
+    ctx.drawImage(img, cx + (cw - sw) / 2, cy + (ch - sh) / 2, sw, sh, 0, 0, W, H);
+    ctx.restore();
+  }
+
+  function glitchSlices(t, amount) {
+    if (amount <= 0) return;
+    const n = Math.floor(3 + amount * 10);
+    for (let i = 0; i < n; i++) {
+      const r = hash(fi(t) * 13 + i);
+      if (r > amount) continue;
+      const y = Math.floor(hash(fi(t) * 7 + i * 3) * H);
+      const h = 6 + Math.floor(hash(i * 5 + fi(t)) * 60);
+      const dx = (hash(i + fi(t) * 3) - 0.5) * 120 * amount;
+      ctx.drawImage(canvas, 0, y, W, h, dx, y, W, h);
+    }
+  }
+
+  function text(str, x, y, o = {}) {
+    const { size = 120, weight = 900, font = DISPLAY, color = "#e6f1ff", glow = G, blur = 30, split = 0, scale = 1, alpha = 1, align = "center", grad = null, track = 0 } = o;
+    if (alpha <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(x, y);
+    ctx.scale(scale, scale);
+    ctx.font = `${weight} ${size}px ${font}`;
+    ctx.textAlign = align;
+    ctx.textBaseline = "middle";
+    if ("letterSpacing" in ctx) ctx.letterSpacing = track + "px";
+    if (split) {
+      ctx.globalCompositeOperation = "lighter";
+      ctx.fillStyle = MG; ctx.fillText(str, -split, 0);
+      ctx.fillStyle = CY; ctx.fillText(str, split, 0);
+      ctx.globalCompositeOperation = "source-over";
+    }
+    if (grad) {
+      const w = ctx.measureText(str).width;
+      const x0 = align === "center" ? -w / 2 : align === "right" ? -w : 0;
+      const g = ctx.createLinearGradient(x0, 0, x0 + w, 0);
+      grad.forEach((c, i) => g.addColorStop(i / (grad.length - 1), c));
+      ctx.fillStyle = g;
+    } else ctx.fillStyle = color;
+    ctx.shadowColor = glow;
+    ctx.shadowBlur = blur;
+    ctx.fillText(str, 0, 0);
+    ctx.restore();
+  }
+
+  // Scale-down "slam" in: big + transparent → 1 at t0 over ~0.18s.
+  function slam(t, t0, dur = 0.18) {
+    if (t < t0) return { scale: 1, alpha: 0, hit: 0 };
+    const p = clamp((t - t0) / dur);
+    return { scale: 2.1 - 1.1 * easeOut(p), alpha: clamp(p * 2), hit: Math.max(0, 1 - (t - t0) / 0.35) };
+  }
+
+  function hashRain(t, alpha = 0.35, color = "0,255,170") {
+    ctx.save();
+    ctx.font = `500 22px ${MONO}`;
+    ctx.textBaseline = "top";
+    for (let c = 0; c < 64; c++) {
+      const x = c * 30 + 4;
+      const speed = 120 + hash(c) * 260;
+      const head = ((t * speed + hash(c + 9) * 1600) % (H + 400)) - 200;
+      for (let k = 0; k < 14; k++) {
+        const y = head - k * 26;
+        if (y < -30 || y > H) continue;
+        ctx.fillStyle = `rgba(${color},${(alpha * (1 - k / 14)).toFixed(3)})`;
+        ctx.fillText("0123456789abcdef"[Math.floor(hash(c * 31 + k + Math.floor(t * 12)) * 16)], x, y);
+      }
+    }
+    ctx.restore();
+  }
+
+  function flash(t, t0, strength = 1, color = "255,255,255") {
+    const a = strength * Math.max(0, 1 - (t - t0) / 0.3);
+    if (t < t0 || a <= 0) return;
+    ctx.fillStyle = `rgba(${color},${a})`;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  function shockwave(t, t0, x = W / 2, y = H / 2, color = "0,255,170") {
+    const p = (t - t0) / 0.9;
+    if (p < 0 || p > 1) return;
+    for (let i = 0; i < 2; i++) {
+      const q = clamp(p - i * 0.12);
+      ctx.strokeStyle = `rgba(${color},${(1 - q) * 0.9})`;
+      ctx.lineWidth = 14 * (1 - q) + 2;
+      ctx.beginPath();
+      ctx.arc(x, y, 60 + easeOut(q) * 1100, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  function shake(t, t0, amp) {
+    const a = amp * Math.max(0, 1 - (t - t0) / 0.4);
+    if (t < t0 || a <= 0) return;
+    ctx.translate((hash(fi(t)) - 0.5) * a, (hash(fi(t) + 99) - 0.5) * a);
+  }
+
+  function cube(x, y, s, color, fillP = 1, label = "") {
+    const d = s * 0.18;
+    ctx.fillStyle = color + "33";
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + d, y - d); ctx.lineTo(x + s + d, y - d); ctx.lineTo(x + s, y); ctx.fill();
+    ctx.fillStyle = color + "1f";
+    ctx.beginPath(); ctx.moveTo(x + s, y); ctx.lineTo(x + s + d, y - d); ctx.lineTo(x + s + d, y + s - d); ctx.lineTo(x + s, y + s); ctx.fill();
+    ctx.fillStyle = "#07101c"; ctx.fillRect(x, y, s, s);
+    ctx.fillStyle = color + "55"; ctx.fillRect(x, y + s * (1 - fillP), s, s * fillP);
+    ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.shadowColor = color; ctx.shadowBlur = 20; ctx.strokeRect(x, y, s, s); ctx.shadowBlur = 0;
+    if (label) text(label, x + s / 2, y + s / 2, { size: s * 0.2, font: MONO, weight: 700, blur: 0 });
+  }
+
+  let scan = null;
+  function overlays(t, bars = 0) {
+    if (!scan) {
+      scan = document.createElement("canvas");
+      scan.width = W; scan.height = H;
+      const s = scan.getContext("2d");
+      s.fillStyle = "rgba(0,0,0,0.18)";
+      for (let y = 0; y < H; y += 4) s.fillRect(0, y, W, 1);
+      const v = s.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.95);
+      v.addColorStop(0, "rgba(0,0,0,0)"); v.addColorStop(1, "rgba(0,0,0,0.75)");
+      s.fillStyle = v; s.fillRect(0, 0, W, H);
+    }
+    ctx.drawImage(scan, 0, 0);
+    if (bars > 0) { ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, bars); ctx.fillRect(0, H - bars, W, bars); }
+  }
+
+  function darken(a) { ctx.fillStyle = `rgba(3,5,10,${a})`; ctx.fillRect(0, 0, W, H); }
+  function tint(color, a) { ctx.save(); ctx.globalCompositeOperation = "overlay"; ctx.fillStyle = `rgba(${color},${a})`; ctx.fillRect(0, 0, W, H); ctx.restore(); }
+  function bug(t) { // small corner logo during footage
+    if (logo) { ctx.globalAlpha = 0.9; ctx.drawImage(logo, 56, 60, 64, 64); ctx.globalAlpha = 1; }
+    text("VOZZ", 134, 93, { size: 34, align: "left", blur: 12 });
+  }
+
+  /* ---------- timeline (beats at 128 BPM) ---------- */
+  const T = (bar, beat = 0) => bar * BAR + beat * B;
+  const S = {
+    intro: [0, T(2)],
+    words: [T(2), T(3)],
+    logo: [T(3), T(5)],
+    rig: [T(5), T(7)],
+    oc: [T(7), T(9)],
+    hot: [T(9), T(11)],
+    cool: [T(11), T(12)],
+    block: [T(12), T(14)],
+    montage: [T(14), T(15)],
+    join: [T(15), T(17)],
+    license: [T(17), T(18)],
+    chain: [T(18), T(20)],
+    final: [T(20), T(24)],
+  };
+  const inS = (t, k) => t >= S[k][0] && t < S[k][1];
+  const local = (t, k) => t - S[k][0];
+  const prog = (t, k) => (t - S[k][0]) / (S[k][1] - S[k][0]);
+
+  async function draw(t) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = "#020306";
+    ctx.fillRect(0, 0, W, H);
+
+    if (inS(t, "intro")) {
+      const lt = local(t, "intro");
+      hashRain(t, 0.18);
+      const a = "THE WORLD RUNS ON GPUs.";
+      const b = "WHAT IF YOU COULD MINE IT?";
+      const na = Math.floor(clamp((lt - 0.3) / 1.0) * a.length);
+      const nb = Math.floor(clamp((lt - 1.9) / 1.0) * b.length);
+      const flick = hash(fi(t)) > 0.92 ? 6 : 0;
+      text(a.slice(0, na) + (na < a.length && Math.floor(t * 4) % 2 ? "_" : ""), W / 2, H / 2 - 60, { size: 64, font: MONO, weight: 700, split: flick, glow: G, blur: 18, alpha: 1 - seg(lt, 3.3, 3.75) });
+      text(b.slice(0, nb) + (nb > 0 && nb < b.length && Math.floor(t * 4) % 2 ? "_" : ""), W / 2, H / 2 + 40, { size: 64, font: MONO, weight: 700, color: G, split: flick, blur: 24, alpha: 1 - seg(lt, 3.3, 3.75) });
+      glitchSlices(t, lt > 3.3 ? 0.6 : hash(fi(t) + 5) > 0.95 ? 0.4 : 0);
+      overlays(t);
+    }
+
+    else if (inS(t, "words")) {
+      const lt = local(t, "words");
+      hashRain(t, 0.35);
+      const words = [["EVERY HASH.", "#e6f1ff"], ["EVERY WATT.", AM], ["EVERY BLOCK.", CY], ["COUNTS.", G]];
+      const i = Math.min(3, Math.floor(lt / B));
+      const s = slam(t, S.words[0] + i * B, 0.12);
+      ctx.save(); shake(t, S.words[0] + i * B, 18);
+      text(words[i][0], W / 2, H / 2, { size: 170, color: words[i][1], glow: words[i][1], split: 8 * s.hit + 2, scale: s.scale, alpha: s.alpha, blur: 40 });
+      ctx.restore();
+      flash(t, S.words[0] + i * B, 0.25);
+      glitchSlices(t, 0.35);
+      overlays(t);
+    }
+
+    else if (inS(t, "logo")) {
+      const lt = local(t, "logo"), t0 = S.logo[0];
+      const bg = await clipFrame("A", 3.9);
+      drawClip(bg, "A", 0, 1, "blur(14px) brightness(0.35) saturate(1.4)");
+      hashRain(t, 0.25);
+      ctx.save(); shake(t, t0, 40); shake(t, t0 + BAR, 16);
+      shockwave(t, t0); shockwave(t, t0 + BAR, W / 2, H / 2, "0,212,255");
+      const s = slam(t, t0, 0.22);
+      const pulse = 1 + 0.03 * Math.max(0, 1 - ((lt % B) / B));
+      if (logo && s.alpha > 0) {
+        const sz = 360 * s.scale * pulse;
+        ctx.save(); ctx.globalAlpha = s.alpha; ctx.shadowColor = G; ctx.shadowBlur = 80;
+        ctx.drawImage(logo, W / 2 - sz / 2, H / 2 - 120 - sz / 2, sz, sz); ctx.restore();
+      }
+      const letters = "VOZZ".split("");
+      letters.forEach((ch, k) => {
+        const sl = slam(t, t0 + B * (k + 1), 0.12);
+        text(ch, W / 2 - 270 + k * 180, H / 2 + 200, { size: 190, grad: ["#eafff7", G, CY], split: 10 * sl.hit, scale: sl.scale, alpha: sl.alpha, blur: 40 });
+      });
+      const tg = slam(t, t0 + BAR + B, 0.2);
+      text("THE GPU MINING GAME", W / 2, H / 2 + 345, { size: 44, font: MONO, weight: 700, color: LI, glow: LI, blur: 20, track: 10, alpha: tg.alpha });
+      ctx.restore();
+      flash(t, t0, 1); flash(t, t0 + BAR, 0.35, "0,255,170");
+      glitchSlices(t, Math.max(0, 1 - lt / 0.5) * 0.8);
+      overlays(t);
+    }
+
+    else if (inS(t, "rig")) {
+      const lt = local(t, "rig"), p = prog(t, "rig");
+      drawClip(await clipFrame("A", lt * 1.0), "A", p, 1.18);
+      darken(0.25);
+      ctx.save(); shake(t, S.rig[0], 26);
+      const a = slam(t, S.rig[0] + B * 0, 0.14), b = slam(t, S.rig[0] + B * 2, 0.14);
+      text("BUILD", W / 2, H / 2 - 70, { size: 200, split: 10 * a.hit + 3, scale: a.scale, alpha: a.alpha, blur: 50 });
+      text("YOUR RIG", W / 2, H / 2 + 130, { size: 200, grad: [G, CY], split: 10 * b.hit + 3, scale: b.scale, alpha: b.alpha, blur: 50 });
+      ctx.restore();
+      text("UP TO 12 GPUs · 6 MODELS", W / 2, H - 150, { size: 36, font: MONO, weight: 700, color: G, alpha: seg(lt, BAR, BAR + 0.3), blur: 16, track: 6 });
+      flash(t, S.rig[0], 0.6);
+      glitchSlices(t, Math.max(0, 1 - lt / 0.4));
+      bug(t); overlays(t, 70);
+    }
+
+    else if (inS(t, "oc")) {
+      const lt = local(t, "oc"), p = prog(t, "oc");
+      drawClip(await clipFrame("B", lt * 1.05), "B", p, 1.2);
+      darken(0.3);
+      const s = slam(t, S.oc[0], 0.14);
+      ctx.save(); shake(t, S.oc[0], 24);
+      text("OVERCLOCK", W / 2, H / 2 - 110, { size: 180, split: 9 * s.hit + 3, scale: s.scale, alpha: s.alpha, blur: 50 });
+      text("EVERYTHING", W / 2, H / 2 + 60, { size: 180, grad: [AM, MG], glow: MG, split: 9 * s.hit + 3, scale: s.scale, alpha: slam(t, S.oc[0] + B, 0.14).alpha, blur: 50 });
+      ctx.restore();
+      const mh = 295 + (1340 - 295) * easeIO(seg(lt, B * 2, BAR * 2 - B));
+      const val = mh >= 1000 ? (mh / 1000).toFixed(2) + " GH/s" : mh.toFixed(0) + " MH/s";
+      text(val, W / 2, H / 2 + 250, { size: 96, font: MONO, weight: 700, color: G, blur: 40, alpha: seg(lt, B * 2, B * 2 + 0.2) });
+      glitchSlices(t, Math.max(0, 1 - lt / 0.35));
+      bug(t); overlays(t, 70);
+    }
+
+    else if (inS(t, "hot")) {
+      const lt = local(t, "hot"), p = prog(t, "hot");
+      ctx.save();
+      const beat = Math.floor(lt / B);
+      shake(t, S.hot[0] + beat * B, 10 + beat * 6);
+      drawClip(await clipFrame("C", lt * 0.9), "C", p, 1.35);
+      tint("255,40,60", 0.25 + 0.25 * Math.max(0, 1 - (lt % B) / B));
+      darken(0.15);
+      const temps = [["88°C", AM], ["94°C", "#ff7a2f"], ["100°C", RD]];
+      if (beat < 3) {
+        const s = slam(t, S.hot[0] + beat * B, 0.1);
+        text(temps[beat][0], W / 2, H / 2, { size: 300, font: MONO, weight: 700, color: temps[beat][1], glow: temps[beat][1], split: 14 * s.hit + 4, scale: s.scale, alpha: s.alpha, blur: 60 });
+      } else if (beat < 5) {
+        const s = slam(t, S.hot[0] + 3 * B, 0.12);
+        text("⚠ THROTTLING", W / 2, H / 2, { size: 150, color: RD, glow: RD, split: 12, scale: s.scale, alpha: s.alpha, blur: 50 });
+      } else {
+        const s = slam(t, S.hot[0] + 5 * B, 0.12);
+        text("TOO HOT?", W / 2, H / 2, { size: 230, color: "#fff", glow: RD, split: 12 * s.hit + 6, scale: s.scale, alpha: s.alpha, blur: 60 });
+      }
+      ctx.restore();
+      glitchSlices(t, 0.25 + 0.5 * Math.max(0, 1 - (lt % B) / 0.2));
+      flash(t, S.hot[0] + 2 * B, 0.45, "255,59,92");
+      bug(t); overlays(t, 70);
+    }
+
+    else if (inS(t, "cool")) {
+      const lt = local(t, "cool"), p = prog(t, "cool");
+      drawClip(await clipFrame("D", lt * 1.6), "D", p, 1.15);
+      tint("0,200,255", 0.3);
+      darken(0.25);
+      const s = slam(t, S.cool[0], 0.16);
+      text("KEEP IT", W / 2, H / 2 - 80, { size: 170, color: "#eafcff", glow: CY, scale: s.scale, alpha: s.alpha, blur: 50 });
+      text("COOL ❄", W / 2, H / 2 + 100, { size: 200, grad: ["#ffffff", CY], glow: CY, scale: s.scale, alpha: slam(t, S.cool[0] + B, 0.14).alpha, blur: 60 });
+      flash(t, S.cool[0], 0.5, "0,212,255");
+      bug(t); overlays(t, 70);
+    }
+
+    else if (inS(t, "block")) {
+      const lt = local(t, "block"), p = prog(t, "block");
+      const hit = S.block[0] + BAR;
+      ctx.save(); shake(t, hit, 50);
+      drawClip(await clipFrame("E", lt), "E", p, t > hit ? 1.25 : 1.08);
+      darken(t < hit ? 0.2 : 0.4);
+      if (t < hit) {
+        const s = slam(t, S.block[0], 0.14);
+        text("GO SOLO.", W / 2, 240, { size: 150, split: 8 * s.hit + 2, scale: s.scale, alpha: s.alpha, blur: 40 });
+        text("WIN THE WHOLE BLOCK.", W / 2, 380, { size: 70, color: G, alpha: slam(t, S.block[0] + B * 2, 0.14).alpha, blur: 30 });
+      } else {
+        shockwave(t, hit); shockwave(t, hit + B * 2, W / 2, H / 2, "204,255,0");
+        const s = slam(t, hit, 0.18);
+        text("BLOCK FOUND", W / 2, H / 2 - 80, { size: 200, grad: ["#eafff7", G, CY], split: 14 * s.hit + 4, scale: s.scale, alpha: s.alpha, blur: 70 });
+        const r = slam(t, hit + B, 0.14);
+        text("+50 VOZZ", W / 2, H / 2 + 120, { size: 160, font: MONO, weight: 700, color: LI, glow: LI, scale: r.scale, alpha: r.alpha, blur: 60 });
+      }
+      ctx.restore();
+      flash(t, hit, 1);
+      glitchSlices(t, Math.max(0, 1 - Math.abs(t - hit) / 0.35));
+      bug(t); overlays(t, 70);
+    }
+
+    else if (inS(t, "montage")) {
+      const lt = local(t, "montage");
+      const i = Math.min(3, Math.floor(lt / B));
+      const cuts = [["F", "MISSIONS", MG], ["I", "LEADERBOARD", AM], ["B", "POOLS", CY], ["A", "UPGRADES", G]];
+      const [id, word, col] = cuts[i];
+      const cl = lt - i * B;
+      drawClip(await clipFrame(id, cl * 1.5 + (id === "A" ? 3 : 0)), id, cl / B, 1.2);
+      darken(0.35);
+      const s = slam(t, S.montage[0] + i * B, 0.1);
+      text(word, W / 2, H / 2, { size: 190, color: "#fff", glow: col, split: 10 * s.hit + 3, scale: s.scale, alpha: s.alpha, blur: 50 });
+      flash(t, S.montage[0] + i * B, 0.4);
+      glitchSlices(t, Math.max(0, 1 - cl / 0.2));
+      bug(t); overlays(t, 70);
+    }
+
+    else if (inS(t, "join")) {
+      const lt = local(t, "join"), p = prog(t, "join");
+      drawClip(await clipFrame("G", lt * 2.2), "G", p, 1.1);
+      darken(0.35);
+      const s = slam(t, S.join[0], 0.16);
+      text("JOIN THE", W / 2, H / 2 - 110, { size: 150, scale: s.scale, alpha: s.alpha, blur: 40, split: 8 * s.hit });
+      text("WAITLIST", W / 2, H / 2 + 50, { size: 200, grad: [G, CY], scale: s.scale, alpha: slam(t, S.join[0] + B, 0.14).alpha, blur: 60 });
+      const steps = ["FOLLOW", "LIKE", "REPOST", "COMMENT"];
+      steps.forEach((w, k) => {
+        const a = slam(t, S.join[0] + BAR + k * B, 0.1);
+        text(`${k + 1}·${w}`, W / 2 - 540 + k * 360, H / 2 + 250, { size: 48, font: MONO, weight: 700, color: G, scale: a.scale, alpha: a.alpha, blur: 20 });
+      });
+      flash(t, S.join[0], 0.5);
+      bug(t); overlays(t, 70);
+    }
+
+    else if (inS(t, "license")) {
+      const lt = local(t, "license"), p = prog(t, "license");
+      drawClip(await clipFrame("H", lt), "H", p, 1.12);
+      darken(0.3);
+      const a = slam(t, S.license[0], 0.12), b = slam(t, S.license[0] + B * 2, 0.12);
+      text("MINER LICENSE", W / 2, 200, { size: 110, scale: a.scale, alpha: a.alpha, blur: 40, split: 6 * a.hit });
+      text("+500 VOZZ", W / 2, H - 200, { size: 140, font: MONO, weight: 700, color: LI, glow: LI, scale: b.scale, alpha: b.alpha, blur: 50 });
+      flash(t, S.license[0], 0.4);
+      bug(t); overlays(t, 70);
+    }
+
+    else if (inS(t, "chain")) {
+      const lt = local(t, "chain"), p = prog(t, "chain");
+      hashRain(t, 0.18, "204,255,0");
+      // blocks streaming across
+      const s = 150, gap = 70, speed = 520;
+      for (let k = -2; k < 16; k++) {
+        const x = W - ((lt * speed + k * (s + gap)) % ((s + gap) * 16)) ;
+        const mine = k % 3 === 0;
+        cube(x, H / 2 + 120, s, mine ? "#00ffaa" : "#ccff00", 1, "#" + (12450 + k));
+      }
+      ctx.strokeStyle = "rgba(204,255,0,0.5)"; ctx.setLineDash([12, 12]); ctx.lineDashOffset = -lt * 200;
+      ctx.beginPath(); ctx.moveTo(0, H / 2 + 120 + s / 2); ctx.lineTo(W, H / 2 + 120 + s / 2); ctx.stroke(); ctx.setLineDash([]);
+      const a = slam(t, S.chain[0], 0.16), b = slam(t, S.chain[0] + B * 2, 0.16);
+      text("BUILT ON", W / 2, 220, { size: 90, color: "#e6f1ff", glow: LI, scale: a.scale, alpha: a.alpha, blur: 30, track: 12 });
+      text("ROBINHOOD CHAIN", W / 2, 360, { size: 140, color: LI, glow: LI, scale: b.scale, alpha: b.alpha, blur: 60, split: 8 * b.hit });
+      text("ETHEREUM L2 · CHAIN ID 4663", W / 2, H - 120, { size: 40, font: MONO, weight: 700, color: "#9fb0c8", alpha: seg(lt, BAR, BAR + 0.4), blur: 0, track: 6 });
+      flash(t, S.chain[0], 0.6, "204,255,0");
+      overlays(t);
+    }
+
+    else {
+      const lt = local(t, "final"), t0 = S.final[0];
+      const bg = await clipFrame("A", 3.9);
+      drawClip(bg, "A", 0, 1, "blur(16px) brightness(0.3) saturate(1.5)");
+      hashRain(t, 0.22);
+      ctx.save(); shake(t, t0, 46);
+      shockwave(t, t0); shockwave(t, t0 + BAR * 2, W / 2, 330, "0,212,255");
+      const s = slam(t, t0, 0.24);
+      const breathe = 1 + 0.025 * Math.sin(lt * 4);
+      if (logo && s.alpha > 0) {
+        const sz = 300 * s.scale * breathe;
+        ctx.save(); ctx.globalAlpha = s.alpha; ctx.shadowColor = G; ctx.shadowBlur = 90;
+        ctx.drawImage(logo, W / 2 - sz / 2, 300 - sz / 2, sz, sz); ctx.restore();
+      }
+      const m = slam(t, t0 + B * 2, 0.16), f = slam(t, t0 + B * 3, 0.16);
+      text("MINE THE", W / 2, 560, { size: 130, scale: m.scale, alpha: m.alpha, blur: 40, split: 6 * m.hit });
+      text("FUTURE", W / 2, 700, { size: 170, grad: [G, CY, MG], glow: MG, scale: f.scale, alpha: f.alpha, blur: 70, split: 8 * f.hit });
+      const c = seg(lt, BAR + B * 2, BAR + B * 2 + 0.3);
+      if (c > 0) {
+        const bw = 760, bh = 110, bx = W / 2 - bw / 2, by = 820;
+        ctx.save(); ctx.globalAlpha = c;
+        const g = ctx.createLinearGradient(bx, 0, bx + bw, 0); g.addColorStop(0, G); g.addColorStop(1, CY);
+        ctx.fillStyle = g; ctx.shadowColor = G; ctx.shadowBlur = 40 + 20 * Math.sin(lt * 6);
+        ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 26); ctx.fill(); ctx.restore();
+        text("PLAY FREE NOW  →", W / 2, by + bh / 2 + 4, { size: 54, color: "#02110b", glow: "transparent", blur: 0, alpha: c });
+      }
+      text("JOIN THE WAITLIST  ·  x.com/vozzGPU", W / 2, 1000, { size: 40, font: MONO, weight: 700, color: LI, glow: LI, blur: 16, alpha: seg(lt, BAR * 2, BAR * 2 + 0.4) });
+      ctx.restore();
+      flash(t, t0, 1);
+      glitchSlices(t, Math.max(0, 1 - lt / 0.5) * 0.9);
+      overlays(t);
+      const out = seg(t, DURATION - 1.2, DURATION - 0.1);
+      if (out > 0) { ctx.fillStyle = `rgba(0,0,0,${out})`; ctx.fillRect(0, 0, W, H); }
+    }
+  }
+
+  let logo = null;
+  window.DURATION = DURATION;
+  window.renderAt = draw;
+  window.ready = Promise.all([
+    ...["900 40px Orbitron", "700 40px Orbitron", "700 40px 'JetBrains Mono'", "500 40px 'JetBrains Mono'", "700 40px Inter"].map((f) => document.fonts.load(f)),
+    loadImg("/assets/logo-mark.svg").then((i) => (logo = i)),
+  ]);
+})();
+</script>
+</body>
+</html>
