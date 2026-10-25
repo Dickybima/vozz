@@ -1,5 +1,5 @@
 /*
- * VOZZ — waitlist page logic: live stats, beta countdown, and the signup flow.
+ * VOZZ — waitlist page logic: live stats and the signup flow.
  *
  * Joining is a two-step flow inside a modal: complete four X (Twitter) missions
  * in order, then paste a wallet address. X actions can't be verified from the
@@ -13,7 +13,6 @@
  */
 (() => {
   const WAITLIST_ENDPOINT = ""; // e.g. "https://api.example.com/waitlist"
-  const BETA_DATE = new Date("2027-01-15T12:00:00+07:00");
   const BASE_WAITLIST = 12847; // seed count shown before any real signups
   const STORAGE_KEY = "vozz-waitlist";
   const STARTER_GPUS = ["VX 5070", "RZ 6800 XT", "VX 6090", "RZ 7900"];
@@ -105,7 +104,6 @@
   const statWait = $("stat-waitlist");
   const statHash = $("stat-hashrate");
   const statBlocks = $("stat-blocks");
-  const statCountdown = $("stat-countdown");
   const footerHash = $("footer-hash");
 
   function renderWaitlist() {
@@ -132,14 +130,6 @@
     }, 4000 + Math.random() * 7000);
   })();
 
-  function renderCountdown() {
-    const diff = Math.max(0, BETA_DATE - Date.now());
-    const d = Math.floor(diff / 864e5);
-    const h = Math.floor((diff % 864e5) / 36e5);
-    const m = Math.floor((diff % 36e5) / 6e4);
-    statCountdown.textContent = diff ? `${d}d ${String(h).padStart(2, "0")}h ${String(m).padStart(2, "0")}m` : "LIVE";
-  }
-  setInterval(renderCountdown, 1000 * 20);
 
   /* ---------- Waitlist ---------- */
   const shortAddr = (a) => (a.length > 14 ? a.slice(0, 6) + "…" + a.slice(-4) : a);
@@ -408,7 +398,6 @@
   /* ---------- Init ---------- */
   $("year").textContent = new Date().getFullYear();
   renderWaitlist();
-  renderCountdown();
 
   const existing = storage.get();
   if (existing) showTicket(existing);
