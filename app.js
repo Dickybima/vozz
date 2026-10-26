@@ -383,21 +383,6 @@
     }
   });
 
-  // $VZ contract address: copy buttons (hero + footer).
-  document.querySelectorAll("[data-copy-ca]").forEach((btn) =>
-    btn.addEventListener("click", async () => {
-      const ca = btn.dataset.copyCa;
-      try {
-        await navigator.clipboard.writeText(ca);
-        toast("$VZ contract address copied ✓");
-      } catch {
-        toast(ca);
-      }
-      btn.classList.add("copied");
-      setTimeout(() => btn.classList.remove("copied"), 1500);
-    })
-  );
-
   $("share-btn").addEventListener("click", async () => {
     const entry = storage.get();
     if (!entry) return;

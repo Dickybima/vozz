@@ -673,63 +673,6 @@ body {
 .video-foot .btn { flex: none; }
 .video-actions { display: flex; gap: 10px; flex: none; }
 
-/* ---------- $VZ contract address ---------- */
-.ca-box {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  max-width: 100%;
-  margin: 18px 0 12px;
-  padding: 8px 8px 8px 10px;
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  background: rgba(5, 9, 16, 0.88);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 0 30px rgba(0, 255, 170, 0.12);
-}
-.ca-ticker {
-  flex: none;
-  padding: 5px 10px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, var(--green), var(--cyan));
-  color: #02110b;
-  font-family: var(--font-display);
-  font-weight: 900;
-  font-size: 0.85rem;
-}
-.ca-label { flex: none; font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); }
-.ca-addr {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: var(--font-mono);
-  font-size: 0.9rem;
-  color: var(--text);
-  user-select: all;
-}
-.ca-copy {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  border-radius: 9px;
-  border: 1px solid var(--green);
-  background: rgba(0, 255, 170, 0.08);
-  color: var(--green);
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
-}
-.ca-copy svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; }
-.ca-copy:hover, .ca-copy.copied { background: var(--green); color: #02110b; }
-.footer-ca { flex-basis: 100%; font-family: var(--font-mono); font-size: 0.75rem; color: var(--muted); word-break: break-all; }
-.footer-ca code { color: var(--green); }
-.link-copy { background: none; border: none; color: var(--cyan); font: inherit; text-decoration: underline; cursor: pointer; padding: 0; }
-
 /* ---------- Robinhood Chain badge ---------- */
 .chain-badge {
   display: inline-flex;
@@ -1073,12 +1016,6 @@ code {
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
   }
-}
-
-@media (max-width: 560px) {
-  .ca-label { display: none; }
-  .ca-copy span { display: none; }
-  .ca-addr { font-size: 0.8rem; }
 }
 
 @media (max-width: 400px) {
