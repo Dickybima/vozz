@@ -2,6 +2,8 @@
 
 # VOZZ — GPU Mining Game Waitlist
 
+**Official $VOZZ contract address:** `0x214a4dd7842d62b5e4bbd1beeba137e550a252b1` (shown with a copy button in the hero and footer of `index.html`).
+
 Waitlist landing page for VOZZ, a GPU-themed mining simulation game built on **Robinhood Chain**, with an animated GPU mining simulation running in the background (canvas).
 
 ## Files
